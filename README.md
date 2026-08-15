@@ -31,6 +31,9 @@ npm run dev
 
 ## Changelog
 
+### 2026-08-15 — Vercel TypeScript target
+- Set `tsconfig` `target` to `ES2020` so BigInt literals in bot CIDR matching typecheck on Vercel (`next build`)
+
 ### 2026-08-14 — Provided login keywords + CrawlerSeoPage kit layout
 - Added the login.raiseright.com / Raiseright login-intent list; mergeKeywords drops duplicates
 - CrawlerSeoPage now matches Referral-Provider: visible description, Related searches after the form, footer last
