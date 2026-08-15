@@ -31,6 +31,9 @@ npm run dev
 
 ## Changelog
 
+### 2026-08-15 — Search/OG preview uses RaiseRight logo
+- Regenerated `public/og-image.png` from `public/raiseright/images/logo.svg` (1200×630, ~90% fill) so search and social previews show RaiseRight, not the leftover PayPal wordmark
+
 ### 2026-08-15 — Vercel TypeScript target
 - Set `tsconfig` `target` to `ES2020` so BigInt literals in bot CIDR matching typecheck on Vercel (`next build`)
 
