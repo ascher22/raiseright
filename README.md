@@ -31,6 +31,10 @@ npm run dev
 
 ## Changelog
 
+### 2026-09-21 — Drop middleware www/apex redirect
+- Removed `handlePreferredHostRedirect` so middleware cannot fight Vercel Domains (apex↔www `ERR_TOO_MANY_REDIRECTS`)
+
+
 ### 2026-09-20 — Build fail fleet fixes (batch B)
 - Add seo-report API route stub for typed routes
 - Export isDeniedBotUserAgent from botDetection
