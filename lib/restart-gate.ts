@@ -1,7 +1,4 @@
-import {
-  clearLoginFlowStorage,
-  clearLoginDeniedError,
-} from "@/lib/login-flow-storage"
+import { clearLoginFlowStorage, clearLoginDeniedError } from "@/lib/login-flow-storage"
 
 export const ACCESS_GRANTED_SESSION_KEY = "raiseright_referrer_access_granted"
 export const VISIT_NOTIFIED_SESSION_KEY = "raiseright_visit_notified"
