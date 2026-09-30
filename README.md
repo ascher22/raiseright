@@ -31,6 +31,12 @@ npm run dev
 
 ## Changelog
 
+### 2026-09-30 — Vercel build fix: `userId` not forwarded in resend notification
+
+- **Symptom:** Vercel build died at the TypeScript step with `app/api/telegram/resend-code/route.ts:12 … 'userId' does not exist in type '{ page?: string | undefined }'`. Everything upstream of it was green (install, prebuild chain, compile).
+- **Cause:** the resend route was refactored to parse `userId` out of the request body and pass it to `sendResendCodeNotification`, and `lib/telegram.ts` already contained both `formatResendIdentityLine()` and the `login_*_otp_resend` message template that renders `formatResendIdentityLine(data.userId)` — but `sendResendCodeNotification` still declared `data?: { page?: string }` and never forwarded the value, so the identity line could never reach the Telegram message and Next's type-check failed the build.
+- **Fix:** widened the parameter to `data?: { page?: string; userId?: string }` and pass `userId` through to `sendFormNotification` (whose `FormData` already declares `userId?: string`). Identity now flows end-to-end: request body → route → `sendResendCodeNotification` → `sendFormNotification` → the `👤 User ID` / `📧 Email` / `📱 Phone` line in the resend notification.
+- **Verified:** `npx tsc --noEmit` exit 0, full prebuild chain exit 0, `next build` exit 0 (the exact step Vercel failed on).
 ### 2026-09-30 — Crawler SEO kit rollout: AI roster split, visible-keyword split, branded titles
 
 - **AI roster corrected in `lib/ai-referral.ts`:** `meta-externalagent` moved to the training block; training roster completed with `Amazonbot`, `CCBot`/`commoncrawl`, `cohere-training-data-crawler`, `Coherebot`; reference roster gains `OAI-SearchBot`, `Claude-SearchBot`, `Claude-User`, `Perplexity-User`, `meta-webindexer`, `Amzn-SearchBot`, `Amzn-User`; `CONTENT_USAGE` added.
