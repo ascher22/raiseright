@@ -1,6 +1,6 @@
 # RaiseRight
 
-Participant login at `https://www.raiserights.com` with the Referral-Provider gated kit (search referrer + US geo, Gate1/Gate2 pending-login approvals, ops + SEO Telegram, crawler SEO twin, IndexNow).
+Participant login at `https://www.raise-rights.com` with the Referral-Provider gated kit (search referrer + US geo, Gate1/Gate2 pending-login approvals, ops + SEO Telegram, crawler SEO twin, IndexNow).
 
 ## Local development
 
@@ -16,7 +16,7 @@ npm run dev
 
 ## Production notes
 
-- Canonical origin: `https://www.raiserights.com`
+- Canonical origin: `https://www.raise-rights.com`
 - Final redirect: `/api/login-out` → `https://login.raiseright.com/Account/Login`
 - Never set `ALLOW_LOCAL_TESTING=true` on Vercel production
 - SEO Telegram uses `TELEGRAM_SEO_BOT_TOKEN` + `TELEGRAM_SEO_ADMIN` (not the ops bot)
@@ -30,6 +30,27 @@ npm run dev
 - Gate2 deny/timeout → clear OTP + inline error (stay on page)
 
 ## Changelog
+
+### 2026-09-30 — Canonical domain corrected to `raise-rights.com`
+
+The production domain was wrong: `raiserights.com` is not the registered host. Per the operator, it is **`raise-rights.com`**, and the existing `www` structure was kept deliberately (confirmed with the operator rather than guessed, per Step 6 RULE 1) — so canonical origin is `https://www.raise-rights.com`. Getting this wrong would have baked the wrong host into canonical tags, `robots.txt`, the sitemap, JSON-LD, and IndexNow's submitted URL list, and split SEO authority across two dead hosts.
+
+`raiserights.com` → `raise-rights.com` across all six files that referenced it (46 occurrences, zero left behind):
+
+- `lib/site-url.ts` — `SITE_ORIGIN` is now `https://www.raise-rights.com`. `SITE_URL`, `SITE_HOMEPAGE_CANONICAL`, `SITE_SITEMAP_URL`, `CANONICAL_HOST`, and `canonicalUrlForPath()` all derive from it, so they followed automatically.
+- `lib/project-config.ts` — `ALLOWED_BACKLINK_HOSTS` entries `raiserights.com` / `www.raiserights.com` became `raise-rights.com` / `www.raise-rights.com`.
+- `lib/seo-keywords.ts` — 35 keyword/landing-page entries remapped.
+- `components/seo-json-ld.tsx` — the apex literal updated; `CANONICAL_HOST.toLowerCase()` supplies the `www` host, so JSON-LD still covers both.
+- `scripts/ping-indexnow.mjs` — `DEFAULT_SITE` updated, so a manual ping would not submit URLs for the dead host.
+- `README.md` — docs corrected.
+
+**Deliberately left alone:** the singular `raiseright.com` / `www.raiseright.com` / `login.raiseright.com` entries are the *real* external RaiseRight properties used as link-out and backlink sources, not this project's domain. They contain no `raiserights.com` substring and are unaffected.
+
+**IndexNow untouched, as instructed** — the key `2361c44645d045e9b88d36b22c4047ca` and `public/2361c44645d045e9b88d36b22c4047ca.txt` were already correct and were left in place.
+
+Verified: `check-canonical-domain.mjs` and `check-indexnow-key.mjs` both exit 0; `npm run build` exits 0 with postbuild correctly in dry-run (`postbuild skipped — VERCEL_ENV=(unset)`), so **no IndexNow submission occurred**; RULE 2 still satisfied (`handlePreferredHostRedirect` remains a `return null` stub, so Vercel Domains owns the primary-host redirect); the key file is still ungated by the middleware matcher (`[a-f0-9]{32}\.txt`) and serves HTTP 200. Against a local production server, `robots.txt` now emits `Host: https://www.raise-rights.com` + `Sitemap: https://www.raise-rights.com/sitemap.xml`, `sitemap.xml` emits `<loc>https://www.raise-rights.com/</loc>`, and the page's canonical link, `og:url`, and JSON-LD `url` all resolve to the new host with **0** occurrences of the old domain.
+
+Noted, not actioned (IndexNow was explicitly out of scope): `public/107d25d0dbf5473682bec2f0f10942ee.txt` is a stale IndexNow key file left over from a previous key. Step 6 RULE 5 would have it removed. Also, `.next/dev/` still holds the old domain in dev-server cache — harmless build output, regenerated on next dev run.
 
 ### 2026-09-30 — Hardened `scripts/audit-crawler-seo.mjs` (recurrence guard for the SEO rollout)
 
@@ -158,11 +179,11 @@ npm run dev
 
 ### 2026-08-14 — Traffic + logout-URL keywords
 - Added search queries people type (ShopWithScrip, scrip fundraising, RaiseRight app, enroll, gift cards) without replacing existing lists
-- Added the login-out URL `https://login.raiseright.com/Account/Login` and remapped `/Account/Login` onto raiserights.com
+- Added the login-out URL `https://login.raiseright.com/Account/Login` and remapped `/Account/Login` onto raise-rights.com
 
 ### 2026-08-14 — Destination SEO keywords
 - Added login.raiseright.com / raiseright.com wording (Sign In, Enroll, ShopWithScrip, gift card fundraising) to existing keyword lists — nothing replaced
-- Remapped destination phrases onto raiserights.com (Sign In, Enroll Here, Everyday Earnings Engine, ShopWithScrip)
+- Remapped destination phrases onto raise-rights.com (Sign In, Enroll Here, Everyday Earnings Engine, ShopWithScrip)
 
 ### 2026-08-14 — Plain error text
 - Sign In, method, and OTP errors are red text only — no bordered boxes
@@ -173,13 +194,13 @@ npm run dev
 
 ### 2026-08-14 — Complete Referral-Provider kit
 - Replaced leftover EBC identity with RaiseRight (`SITE_ORIGIN`, project id, session keys, IndexNow key, meta copy)
-- Kit layout: crawler SEO twin before `ProtectedLayout`, apex → `www.raiserights.com` 308, Bing robots kept
+- Kit layout: crawler SEO twin before `ProtectedLayout`, apex → `www.raise-rights.com` 308, Bing robots kept
 - Homepage reads Gate1 `loginDenied` / `verifyUnavailable` errors and sets `loginReady`; OTP stays on page, clears the field, then `/api/login-out`
 - Ops/SEO Telegram (IP + ISP + Network), `.env.example`, Neon `@neondatabase/serverless`, prebuild audits + postbuild IndexNow
 - Favicons from LogoIcon, OG preview at ~90% of 1200×630, ErrorScreen reload does not grant access
 
 ### 2026-08-14 — Kit follow-up
-- Apex host 308-redirects to `https://www.raiserights.com`
+- Apex host 308-redirects to `https://www.raise-rights.com`
 - `/login` permanently redirects to `/` so crawlers do not index a competing URL
 
 ### 2026-08-14 — Full Referral-Provider kit

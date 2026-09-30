@@ -17,7 +17,7 @@ const SCHEMA_ALTERNATE_NAMES = [
   "gift card fundraising",
   "Everyday Earnings Engine",
   "login.raiseright.com",
-  "raiserights.com",
+  "raise-rights.com",
   CANONICAL_HOST.toLowerCase(),
 ] as const
 
