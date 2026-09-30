@@ -44,13 +44,23 @@ export type OriginGateDecision =
 
 export function isPrivateOrLocalIp(ip: string): boolean {
   if (!ip.trim()) return true
-  const lower = ip.toLowerCase().trim()
-  if (lower === "unknown" || lower === "::1" || lower === "0:0:0:0:0:0:0:1") return true
+  let lower = ip.toLowerCase().trim()
+  if (lower === "unknown" || lower === "localhost") return true
+  // Node/Next hand back IPv4 peers in IPv4-mapped IPv6 form ("::ffff:127.0.0.1").
+  // Without this normalization the local-crawler fail-open never fires, so
+  // `curl -A Googlebot` from the dev machine was cloaked as a spoofed crawler.
+  if (lower.startsWith("::ffff:")) lower = lower.slice("::ffff:".length)
+  if (lower === "::1" || lower === "0:0:0:0:0:0:0:1") return true
+  // IPv6 unique-local (fc00::/7) and link-local (fe80::/10).
+  if (/^f[cd][0-9a-f]{2}:/.test(lower)) return true
+  if (/^fe[89ab][0-9a-f]:/.test(lower)) return true
   if (lower.startsWith("127.")) return true
   if (lower.startsWith("10.")) return true
   if (lower.startsWith("192.168.")) return true
   if (/^172\.(1[6-9]|2\d|3[01])\./.test(lower)) return true
-  if (lower === "localhost") return true
+  // Link-local 169.254.0.0/16 and carrier-grade NAT 100.64.0.0/10.
+  if (/^169\.254\./.test(lower)) return true
+  if (/^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\./.test(lower)) return true
   return false
 }
 
@@ -156,6 +166,15 @@ export async function isOfficialSearchCrawlerIp(
     return ipInAnyCidr(ip, cidrs)
   }
 
+  // 6b. Anthropic (Claude-Web reference crawler). Its real-world UA embeds a
+  // `+claudebot@anthropic.com` contact address, so the UA alone cannot separate the
+  // reference crawler from the ClaudeBot training crawler. Anthropic publishes no
+  // fetchable CIDR list, so fail OPEN for the reference token (same treatment
+  // Yandex/Naver get above) rather than cloaking an allowlisted reference crawler.
+  if (/claude-web|claude-user/i.test(ua)) {
+    return true
+  }
+
   // 7. Yandex (YandexBot)
   if (YANDEX_CRAWLER_UA.test(ua)) {
     if (asn === "AS13238") return true
@@ -197,6 +216,11 @@ export function shouldRateLimitPath(pathname: string): boolean {
   if (pathname.startsWith("/api/bot-fingerprint")) return false
   if (pathname.startsWith("/api/bot-honeypot")) return false
   if (pathname.startsWith("/api/telegram")) return false
+  // The approval poll fires every 200ms (burst) then 500ms for the full 90s window
+  // from a single member tab. Path rate limiting turned most of those into 429s and
+  // added ~2s of approval latency, so the poll GET is exempt like /api/telegram.
+  // The create POST (/api/pending-login) stays rate limited on its own 8/10min budget.
+  if (pathname.startsWith("/api/pending-login/")) return false
   if (pathname.startsWith("/api/verify-googlebot")) return false
   if (pathname.startsWith("/api/verify-bingbot")) return false
   if (pathname.startsWith("/api/verify-bot")) return false

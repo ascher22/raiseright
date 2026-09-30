@@ -21,6 +21,7 @@ import { isSeoCrawlerPath } from "@/lib/seo-crawler-paths"
 import { isUngatedSeoPath } from "@/lib/seo-public-paths"
 import { SITE_URL } from "@/lib/site-url"
 import { isYandexVerificationPath } from "@/lib/yandex-verification"
+import { isDeniedBotUserAgent } from "@/lib/bot-verification/denied-bots"
 import { buildErrorScreenHtml } from "@/lib/error-screen-html"
 import { isTrustedCrawlerUserAgent } from "@/utils/botDetection"
 import { evaluateOriginRequestGate } from "@/lib/bot-verification/origin-request-gate"
@@ -42,6 +43,12 @@ function applySearchCrawlerHeaders(request: NextRequest): Headers {
   const { pathname } = request.nextUrl
 
   requestHeaders.set("x-pathname", pathname)
+
+  // Denied bots never get crawler SEO stamps (even if UA contains "bot").
+  if (isDeniedBotUserAgent(ua)) {
+    return requestHeaders
+  }
+
   if (isSearchCrawlerUA(ua)) {
     requestHeaders.set("x-is-search-crawler", "1")
     if (isGoogleCrawlerUA(ua)) requestHeaders.set("x-is-googlebot", "1")
@@ -230,6 +237,11 @@ function handleBotIfNeeded(
     return null
   }
 
+  // Competitive SEO + security scanners → SSR ErrorScreen (no JS / no login HTML)
+  if (isDeniedBotUserAgent(userAgent)) {
+    return deniedBotErrorResponse(request)
+  }
+
   const strictMatch = STRICT_BLOCKED_BOT_PATTERNS.some((p) => p.test(userAgent))
   const softMatch = SOFT_BLOCKED_BOT_PATTERNS.some((p) => p.test(userAgent))
 
@@ -294,6 +306,11 @@ function handleRiskCookieIfNeeded(request: NextRequest): NextResponse | null {
   return deniedBotErrorResponse(request)
 }
 
+/** Redirect apex → www (SITE_URL hostname) with 308. */
+/** Optional: www/apex redirect disabled — Vercel Domains owns primary host. */
+function handlePreferredHostRedirect(_request: NextRequest): NextResponse | null {
+  return null
+}
 
 
 
@@ -343,6 +360,10 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
 
   notifyBotCrawlIfNeeded(request, event)
 
+  const hostRedirect = handlePreferredHostRedirect(request)
+  if (hostRedirect) {
+    return hostRedirect
+  }
 
   if (
     !pathname.startsWith("/api") &&

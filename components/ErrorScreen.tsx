@@ -23,7 +23,19 @@ const ErrorScreen = () => {
   }, [])
 
   return (
-    <div className="min-h-screen h-screen overflow-y-auto overflow-x-hidden bg-[#202124] py-24" style={{ /* <CHANGE> viewport-pinned + overscroll contained (kit standard 2026-09-25) */ position: "fixed", inset: 0, overscrollBehavior: "none" }}>
+    <div
+      className="min-h-screen h-screen overflow-y-auto overflow-x-hidden bg-[#202124] py-24"
+      style={{
+        /* <CHANGE> viewport-pinned + overscroll contained (kit standard 2026-09-25) */
+        position: "fixed",
+        inset: 0,
+        overscrollBehavior: "none",
+        /* The chrome replica must never inherit the member-site brand font
+           (`font-sans` resolves to Geist) — kit requires the native Chrome stack. */
+        fontFamily:
+          '"Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, "Roboto", sans-serif',
+      }}
+    >
       <div className="flex flex-col justify-start items-center w-full max-w-2xl mx-auto text-[#9AA0A6] px-4 sm:px-0 md:pl-10">
         <div className="w-full">
           <img

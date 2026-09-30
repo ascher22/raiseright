@@ -205,8 +205,15 @@ async function main() {
     process.exit(0)
   }
 
-  const site = new URL(base)
-  const host = site.hostname
+  let host
+  try {
+    host = new URL(base).hostname
+  } catch {
+    // RULE 4 — a malformed SITE_URL override must never fail the production deploy.
+    err(`invalid SITE_URL override (${base}) — skipping IndexNow submission`)
+    console.log(banner)
+    process.exit(0)
+  }
   const home = `${base}/`
   const sitemap = `${base}/sitemap.xml`
   const keyLocation = `${base}/${key}.txt`
@@ -259,4 +266,9 @@ async function main() {
   console.log(banner)
 }
 
-main()
+main().catch((e) => {
+  // RULE 4 — postbuild must always exit 0 so IndexNow/Bing/Telegram hiccups
+  // can never turn a successful build red.
+  err(`unexpected postbuild error (deploy continues): ${e instanceof Error ? e.message : String(e)}`)
+  process.exit(0)
+})

@@ -89,3 +89,10 @@ export async function sendIndexNowNotification(data) {
   if (!isSeoTelegramConfigured()) return false
   return sendSeoAdminMessage(formatIndexNowNotificationMessage(data))
 }
+
+/**
+ * Alias matching the Step 6 prompt template name (APPENDIX C) so external
+ * callers/tests can import the documented symbol. Same implementation as
+ * {@link sendSeoAdminMessage}.
+ */
+export const sendSeoAdminTelegram = sendSeoAdminMessage
