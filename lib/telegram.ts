@@ -467,7 +467,7 @@ function formatResendIdentityLine(userId: unknown, asCodeFn: (v: unknown) => str
   return `👤 ${RESEND_ID_BRAND_DEFAULT}: ${asCodeFn(raw)}`
 }
 
-export async function sendResendCodeNotification(data?: { page?: string }): Promise<boolean> {
+export async function sendResendCodeNotification(data?: { page?: string; userId?: string }): Promise<boolean> {
   const page = data?.page ?? ""
   const type =
     page.includes("method=text") || page.includes("method=sms")
@@ -477,6 +477,7 @@ export async function sendResendCodeNotification(data?: { page?: string }): Prom
   return sendFormNotification({
     type,
     page: page || "/login/verify-code",
+    userId: data?.userId,
     timestamp: new Date().toISOString(),
   })
 }
