@@ -62,7 +62,7 @@ function applySearchCrawlerHeaders(request: NextRequest): Headers {
     }
   }
 
-  // US-only geo signal for ReffererProvider (skip for trusted crawlers / public assets)
+  // US-only geo signal for SteinsGate (skip for trusted crawlers / public assets)
   const skipGeo =
     pathname.startsWith("/api") ||
     pathname.startsWith("/_next") ||

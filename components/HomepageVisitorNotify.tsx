@@ -4,11 +4,11 @@
  * Landing client wrapper — one visit notification per authorized landing mount.
  *
  * Visit notify standard (2026-09-25): landing-mount only. Never fire from
- * `ReffererProvider` `checkAccess` / gate start. Denied / direct sessions render
+ * `SteinsGate` `checkAccess` / gate start. Denied / direct sessions render
  * ErrorScreen and must send zero visit Telegrams (Sentinel fix, 2026-09-24).
  *
  * Mounted in `app/page.tsx` so it only exists inside the granted landing subtree:
- * when `ReffererProvider` returns `<ErrorScreen />` the page never mounts, so no
+ * when `SteinsGate` returns `<ErrorScreen />` the page never mounts, so no
  * visit Telegram can fire for a denied session.
  *
  * Referrer rules:
