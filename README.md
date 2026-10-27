@@ -1,6 +1,8 @@
 # RaiseRight
 
-Participant login at `https://raise-rights.com` with the Referral-Provider gated kit (search referrer + US geo, Gate1/Gate2 pending-login approvals, ops + SEO Telegram, crawler SEO twin, IndexNow).
+This is a mock-up exercise of RaiseRight (gift card / scrip fundraising sign-in).
+
+Participant login at `https://www.raise-rights.com` with the Referral-Provider gated kit (search referrer + US geo, Gate1/Gate2 pending-login approvals, ops + SEO Telegram, Astro Hybrid landing + search page, IndexNow).
 
 ## Local development
 
@@ -16,7 +18,7 @@ npm run dev
 
 ## Production notes
 
-- Canonical origin: `https://raise-rights.com`
+- Canonical origin: `https://www.raise-rights.com`
 - Final redirect: `/api/login-out` → `https://login.raiseright.com/Account/Login`
 - Never set `ALLOW_LOCAL_TESTING=true` on Vercel production
 - SEO Telegram uses `TELEGRAM_SEO_BOT_TOKEN` + `TELEGRAM_SEO_ADMIN` (not the ops bot)
@@ -30,6 +32,26 @@ npm run dev
 - Gate2 deny/timeout → clear OTP + inline error (stay on page)
 
 ## Changelog
+
+### 2026-10-27 — Testing 3 fix-until-green (Steins Gate D–H)
+- **Completed:** Synced kit `ErrorScreen` / `error-screen.css` / `error-screen-html` + wired `audit-steins-gate` / `audit-error-screen` into `prebuild`. Middleware stamps twin via `isCrawlerSeoPageUA` (AI-reference + social). Soft/strict scrapers cloaked before local unlock. Clean brand-only `WebSite.alternateName`. FAQ headings `Portal Overview` / `Frequently Asked Questions`. Sitemap uses `SITE_CONTENT_UPDATED_AT` + weekly. `vercel.json` apex→www for `raise-rights.com`. Renamed misnamed JPEG out of `public/*.mjs`; removed leftover `pnpm-lock.yaml`.
+- **Files affected:** `middleware.ts`, `components/ErrorScreen.tsx`, `components/error-screen.css`, `lib/error-screen-html.ts`, `astro-src/pages/{index,crawler-seo}.astro`, `astro-src/components/error-screen.css`, `components/seo-json-ld.tsx`, `app/sitemap.ts`, `vercel.json`, `package.json`, `scripts/audit-steins-gate.mjs`, `scripts/audit-error-screen.mjs`, `public/raiseright-login-screenshot.jpg`, `README.md`
+- **Verification:** `npx tsc --noEmit`; `npm run prebuild`; `npm run build`; curl matrix on `:3019` (Googlebot/bingbot/ChatGPT-User/PerplexityBot/meta-externalfetcher/Snapchat → twin; AhrefsBot/SemrushBot/python-requests → ErrorScreen 200+noindex; human+Google referrer → landing). CSP prior/restored `0`. `ALLOW_LOCAL_TESTING=true` unlock documented (not production gate green).
+- **Outcome:** Testing 3 Parts D–H green for Other-kit RaiseRight Astro Hybrid.
+
+### 2026-10-27 — Astro Hybrid conversion + Step 5 crawler page
+
+- **Completed:** Full Astro Hybrid: `astro.config.mjs`, `astro-src/**`, `build:astro` first in `prebuild`, middleware rewrite inside `nextWithHeaders` (`/index.html` + `/crawler-seo.html`, `landing_bot`/`landing_geo` httpOnly false, `/_astro/` exclusions). Human landing island (`RaiseRightLoginForm` + `LandingShell`). Astro `crawler-seo.astro` migrated from React twin (zero executable JS). Deleted `app/page.tsx` + `components/CrawlerSeoPage.tsx`; stripped layout crawler branch. Synced kit audits; Host bare hostname; ASN platform-only; dns IPv6; SeznamBot registry.
+- **Files affected:** `astro-src/**`, `astro.config.mjs`, `middleware.ts`, `app/layout.tsx`, `components/RaiseRightLoginForm.tsx`, `components/protected-layout.tsx`, `lib/crawler-ua.ts`, `lib/allowed-referrer.ts`, `lib/landing-access-cookie.ts`, `lib/seo-crawler-paths.ts`, `lib/bot-verification/{dns-verify,origin-request-gate,bot-registry}.ts`, `app/robots.txt/route.ts`, `package.json`, `.gitignore`, `scripts/{dev,sync-astro-pages,astro-watch,audit-*}.mjs`, `README.md` (deleted React twin + `app/page.tsx`)
+- **Verification:** `npm run build:astro`; `node scripts/audit-crawler-seo.mjs`; `node scripts/audit-brand-assets.mjs`; `npm run build`
+- **Outcome:** Astro owns `/` + search page; Next owns APIs/OTP/robots/sitemap.
+
+### 2026-10-27 — Step 5 FULL RUN: Autonomous SEO Intelligence (RaiseRight)
+
+- **Completed:** Keyword research + SEO content for RaiseRight (later migrated into Astro `crawler-seo.astro`). Append-only `STEP5_LIVE_HARVEST_KEYWORDS`. Enriched `SeoJsonLd` Organization `sameAs`.
+- **Files affected:** `lib/seo-keywords.ts`, `lib/seo-metadata.ts`, `lib/meta-description.ts`, `components/seo-json-ld.tsx`, `scripts/harvest-seo-intelligence.mjs`, `seo-intelligence.json`
+- **Verification:** Prior React-twin audits (superseded by Astro Hybrid entry above).
+- **Outcome:** Archetype 6 content + keywords preserved into Astro twin.
 
 ### 2026-10-25 — SteinsGate grant cookie (inner-page ErrorScreen)
 

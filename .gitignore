@@ -28,3 +28,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Astro Hybrid (built into public/ by build:astro)
+/dist-astro/
+/.astro/
+/public/index.html
+/public/crawler-seo.html
+/public/_astro/

@@ -1,5 +1,9 @@
 "use client"
 
+/**
+ * Human RaiseRight login UI — reused by the Astro landing island (index.astro).
+ * Formerly app/page.tsx; keep behavior identical across Astro/Next boundary.
+ */
 import { useLayoutEffect, useState, type FormEvent } from "react"
 import { useRouter } from "next/navigation"
 import {
@@ -9,8 +13,9 @@ import {
 } from "@/lib/approval-messages"
 import { wait } from "@/lib/loading-delays"
 import { storeLoginCredentials } from "@/lib/login-flow-storage"
+import { SITE_DISPLAY_NAME } from "@/lib/site-url"
 
-export default function LoginPage() {
+export default function RaiseRightLoginForm() {
   const [showPassword, setShowPassword] = useState(false)
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
@@ -70,7 +75,7 @@ export default function LoginPage() {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/raiseright/images/logo.svg"
-            alt="RaiseRight"
+            alt={SITE_DISPLAY_NAME}
             className="w-83 h-auto md:w-95 object-contain"
           />
         </div>

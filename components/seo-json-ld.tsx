@@ -1,7 +1,5 @@
 import { LAYOUT_DESCRIPTION } from "@/lib/meta-description"
-import { SITE_TITLE } from "@/lib/seo-metadata"
 import {
-  CANONICAL_HOST,
   SITE_DISPLAY_NAME,
   SITE_HOMEPAGE_CANONICAL,
   SITE_ORIGIN,
@@ -9,16 +7,23 @@ import {
 } from "@/lib/site-url"
 
 const SCHEMA_ALTERNATE_NAMES = [
-  SITE_TITLE,
-  "RaiseRight login",
+  "RaiseRight Benefits",
+  "RaiseRight Login",
+  "RaiseRight Portal",
   "RaiseRight scrip",
-  "shopwithscrip",
   "ShopWithScrip",
   "gift card fundraising",
   "Everyday Earnings Engine",
-  "login.raiseright.com",
-  "raiserights.com",
-  CANONICAL_HOST.toLowerCase(),
+  "Great Lakes Scrip Center",
+] as const
+
+const ORGANIZATION_SAME_AS = [
+  "https://www.raiseright.com/about-us/",
+  "https://www.linkedin.com/company/raiseright/",
+  "https://www.facebook.com/RaiseRightFundraising",
+  "https://www.instagram.com/raiserightfundraising/",
+  "https://www.bbb.org/us/mi/grand-rapids/profile/fundraising-counselors-and-organizations/raiseright-llc-0372-13002078/",
+  "https://apps.apple.com/us/app/raiseright-fundraising/id1498234012",
 ] as const
 
 export function SeoJsonLd() {
@@ -52,8 +57,23 @@ export function SeoJsonLd() {
     "@context": "https://schema.org",
     "@type": "Organization",
     name: SITE_DISPLAY_NAME,
+    alternateName: [
+      "ShopWithScrip",
+      "Great Lakes Scrip Center",
+      "RaiseRight LLC",
+      "Great Lakes Scrip Center Inc",
+    ],
     url: SITE_ORIGIN,
     logo: logoUrl,
+    description: LAYOUT_DESCRIPTION,
+    foundingDate: "1994",
+    address: {
+      "@type": "PostalAddress",
+      addressLocality: "Grand Rapids",
+      addressRegion: "MI",
+      addressCountry: "US",
+    },
+    sameAs: [...ORGANIZATION_SAME_AS],
   }
 
   return (

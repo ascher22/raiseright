@@ -1,6 +1,6 @@
-/** Layout / SERP meta description — keep within ~25–160 characters for Bing. */
+/** Layout / SERP meta description — brand-first, domain-agnostic, 120–160 chars. */
 export const LAYOUT_DESCRIPTION =
-  "Sign in to RaiseRight to access your scrip fundraising account, order gift cards, view earnings, and manage school fundraising tools online."
+  "RaiseRight sign-in for gift card fundraising (scrip): order cards, track Everyday Earnings, shop, dine, travel, and support your school or team."
 
 export const HOME_DESCRIPTION =
   "RaiseRight login. Securely sign in to manage your scrip account, gift cards, and school fundraising."

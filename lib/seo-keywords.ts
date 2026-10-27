@@ -250,6 +250,72 @@ export const PROVIDED_KEYWORDS = [
   "Raiseright reset password",
 ] as const
 
+/**
+ * Step 5 FULL RUN 2026-10-27 — append-only harvest from Track A/B/C + suggest engines.
+ * Authentic fundraising / scrip demand only (Alight/401k heuristic noise omitted).
+ */
+export const STEP5_LIVE_HARVEST_KEYWORDS = [
+  "raiseright login app",
+  "raiseright login with email",
+  "raise right login script",
+  "raiseright fundraising login",
+  "raiseright sign up",
+  "raiseright walmart",
+  "raiseright faq",
+  "raiseright customer service",
+  "raiseright phone number",
+  "raiseright logo",
+  "raiseright coordinator login",
+  "raiseright account sign in",
+  "raiseright portal login",
+  "raiseright identity verification",
+  "raiseright member services",
+  "raiseright enrollment guide",
+  "Great Lakes Scrip Center",
+  "Great Lakes Scrip Center login",
+  "RaiseRight LLC",
+  "RaiseRight Grand Rapids",
+  "RaiseRight Everyday Earnings Engine",
+  "RaiseRight gift card fundraising",
+  "RaiseRight Shop Online earn",
+  "RaiseRight Local Dining",
+  "RaiseRight Travel Bookings",
+  "RaiseRight Fundraising app",
+  "RaiseRight Help Center",
+  "support.raiseright.com",
+  "login.raiseright.com forgot username",
+  "login.raiseright.com forgot password",
+  "raiseright.com/enroll",
+  "raiseright.com/shop",
+  "ShopWithScrip rebrand RaiseRight",
+  "MyScripWallet RaiseRight app",
+  "school gift card fundraiser RaiseRight",
+  "church gift card fundraising RaiseRight",
+  "PTA RaiseRight login",
+  "booster club RaiseRight",
+  "band fundraising RaiseRight",
+  "scout troop scrip RaiseRight",
+  "RaiseRight coordinator portal",
+  "RaiseRight family login",
+  "RaiseRight reload gift cards",
+  "RaiseRight eGift wallet",
+  "RaiseRight App Store",
+  "RaiseRight Google Play",
+  "com.shopwithscrip.app",
+  "how to login to RaiseRight fundraising",
+  "RaiseRight scrip login school",
+  "RaiseRight organization enroll",
+  "RaiseRight privacy policy",
+  "RaiseRight terms of use",
+  "RaiseRight contact us",
+  "RaiseRight how it works",
+  "gift card fundraising for organizations",
+  "no selling fundraising RaiseRight login",
+  "digital fundraising portal RaiseRight",
+  "RaiseRight participant sign in",
+  "RaiseRight family account access",
+] as const
+
 export function buildSiteKeywords(): string[] {
   return mergeKeywords(
     HOST_KEYWORDS,
@@ -260,6 +326,7 @@ export function buildSiteKeywords(): string[] {
     FINAL_URL_HARVEST_KEYWORDS,
     LOGOUT_URL_KEYWORDS,
     PROVIDED_KEYWORDS,
+    STEP5_LIVE_HARVEST_KEYWORDS,
   )
 }
 

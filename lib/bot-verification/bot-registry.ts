@@ -121,6 +121,15 @@ export const BOT_REGISTRY: readonly BotRegistryEntry[] = [
     verification: "none",
   },
   {
+    id: "seznambot",
+    label: "SeznamBot",
+    tier: "search_crawler",
+    category: "search_engine",
+    substrings: ["seznambot"],
+    verification: "dns",
+    dnsSuffixes: [".seznam.cz"],
+  },
+  {
     id: "screaming_frog",
     label: "Screaming Frog",
     tier: "seo_tool",
