@@ -22,7 +22,7 @@ const VISIBLE_HOST_TOKENS = [
  * meta keywords; a domain in visible body copy reads as stuffing to Google/Bing.
  */
 export function buildVisibleKeywords(): string[] {
-  return SITE_KEYWORDS.filter((k) => !VISIBLE_HOST_TOKENS.some((h) => k.toLowerCase().includes(h)))
+  return SITE_KEYWORDS.filter((k) => !/(?:https?:\/\/|www\.|[a-z0-9-]+\.(?:com|net|org|app|io|co|us|edu|gov|info|biz|shop|store|online)\b)/i.test(k) && !VISIBLE_HOST_TOKENS.some((h) => k.toLowerCase().includes(h)))
 }
 
 export const SITE_VISIBLE_KEYWORDS = buildVisibleKeywords()

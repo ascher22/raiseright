@@ -316,6 +316,110 @@ export const STEP5_LIVE_HARVEST_KEYWORDS = [
   "RaiseRight family account access",
 ] as const
 
+/**
+ * Step 5 RERUN 2026-11-02 — Track C keyword implementation (append-only, C1–C6 grouped).
+ * 78 proposed net-new literals (research/track-c-keywords.md §4): 76 natural phrases
+ * below + 2 host-shaped tokens in STEP5_RERUN_20261102_HOST_KEYWORDS (meta/HOST source).
+ * Machine-checked against the 255-literal baseline: zero collisions, zero internal
+ * duplicates. Absolute Keyword Preservation Rule: additive only — no existing literal
+ * is deleted or edited.
+ */
+export const STEP5_RERUN_20261102_KEYWORDS = [
+  // ── C1 — Corporate Entity & Brand Variants (11) ──
+  "RaiseRight FlipGive",
+  "RaiseRight FlipGive transition",
+  "FlipGive RaiseRight login",
+  "FlipGive vs RaiseRight",
+  "RaiseRight acquired FlipGive",
+  "RaiseRight founded 1994",
+  "RaiseRight Grand Rapids Michigan",
+  "ShopWithScrip Great Lakes Scrip Center",
+  "Great Lakes Scrip Center ShopWithScrip",
+  "RaiseRight formerly ShopWithScrip",
+  "RaiseRight brand partners",
+  // ── C2 — Products & Services (14) ──
+  "RaiseRight gift card brands",
+  "RaiseRight reloadable gift cards",
+  "RaiseRight physical gift cards",
+  "RaiseRight Ship to Home",
+  "RaiseRight grocery gift cards",
+  "RaiseRight gas gift cards",
+  "RaiseRight eGift card wallet",
+  "RaiseRight gift card list",
+  "RaiseRight retailer list",
+  "RaiseRight bonus earning events",
+  "RaiseRight browser extension",
+  "RaiseRight online shopping earnings",
+  "gift card fundraiser platform",
+  "scrip gift card program",
+  // ── C3 — Authentication & Action Intents (12) ──
+  "RaiseRight create account",
+  "RaiseRight username password",
+  "RaiseRight reset username",
+  "RaiseRight security questions",
+  "RaiseRight two-step verification",
+  "RaiseRight bank account linking",
+  "RaiseRight login help",
+  "sign up for RaiseRight",
+  "RaiseRight account recovery",
+  "RaiseRight forgot username help",
+  "RaiseRight app sign in",
+  "RaiseRight join a program",
+  // ── C4 — Participant & Role (13) ──
+  "RaiseRight parents",
+  "RaiseRight school parents fundraising",
+  "RaiseRight coordinator dashboard",
+  "RaiseRight chair login",
+  "RaiseRight treasurer",
+  "RaiseRight team fundraising",
+  "RaiseRight church program",
+  "RaiseRight school program",
+  "RaiseRight booster club program",
+  "RaiseRight scout troop fundraising",
+  "RaiseRight participant earnings",
+  "RaiseRight organization login",
+  "RaiseRight nonprofit fundraising",
+  // ── C5 — Platform & Vendor Synergy (8 visible; 2 host-shaped → HOST block) ──
+  "MyScripWallet app download",
+  "ShopWithScrip wallet",
+  "shopwithscrip website",
+  "RaiseRight platform",
+  "RaiseRight app Android",
+  "RaiseRight iOS app",
+  "RaiseRight company",
+  "RaiseRight reviews",
+  // ── C6 — Self-Service & Support (18) ──
+  "RaiseRight enrollment code",
+  "where to find RaiseRight enrollment code",
+  "RaiseRight support phone number",
+  "RaiseRight customer service hours",
+  "RaiseRight payout timeline",
+  "RaiseRight earnings distribution",
+  "RaiseRight order history",
+  "RaiseRight gift card balance",
+  "RaiseRight convenience fees",
+  "RaiseRight transaction fees",
+  "RaiseRight change username",
+  "RaiseRight delete account",
+  "RaiseRight switch organization",
+  "RaiseRight invite friends and family",
+  "RaiseRight QR code enrollment",
+  "RaiseRight order deadline",
+  "RaiseRight tuition credit",
+  "RaiseRight shipping options",
+] as const
+
+/**
+ * Step 5 rerun 2026-11-02 — host-shaped tokens (meta-only / HOST source, C5 remainder).
+ * Served via `<meta name="keywords">` (Yandex) only; buildVisibleKeywords() in
+ * lib/seo-metadata.ts keeps them out of the visible `Related searches:` body
+ * (domain-zero-exposure invariant). Placement change ≠ deletion.
+ */
+export const STEP5_RERUN_20261102_HOST_KEYWORDS = [
+  "com.shopwithscrip.app login",
+  "support.raiseright.com help center",
+] as const
+
 export function buildSiteKeywords(): string[] {
   return mergeKeywords(
     HOST_KEYWORDS,
@@ -327,6 +431,8 @@ export function buildSiteKeywords(): string[] {
     LOGOUT_URL_KEYWORDS,
     PROVIDED_KEYWORDS,
     STEP5_LIVE_HARVEST_KEYWORDS,
+    STEP5_RERUN_20261102_KEYWORDS,
+    STEP5_RERUN_20261102_HOST_KEYWORDS,
   )
 }
 

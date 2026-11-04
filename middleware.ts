@@ -236,7 +236,9 @@ function isPublicAssetPath(pathname: string): boolean {
     pathname.startsWith("/emp/") ||
     pathname.startsWith("/raiseright/") ||
     pathname.startsWith("/assets/") ||
-    pathname.startsWith("/_astro/")
+    pathname.startsWith("/_astro/") ||
+    pathname.startsWith("/fonts/") ||
+    pathname.startsWith("/images/")
   )
 }
 
@@ -513,7 +515,7 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
 
 export const config = {
   matcher: [
-    // Do NOT exclude index.html / crawler-seo.html — they must stay gated.
-    "/((?!_next/static|_next/image|error-icon\\.png|favicon\\.ico|favicon\\.png|favicon-32x32\\.png|icon-48x48\\.png|icon-32x32\\.png|apple-touch-icon\\.png|og-image\\.png|logo\\.png|LogoIcon\\.svg|emp/|raiseright/|assets/|_astro/|yandex_[0-9a-f]+\\.html|[a-f0-9]{32}\\.txt).*)",
+    // Do NOT exclude the two pre-built variant files — they must stay gated.
+    "/((?!fonts/|images/|.*\\.(?:woff2?|ttf|otf|eot)|_next/static|_next/image|error-icon\\.png|favicon\\.ico|favicon\\.png|favicon-32x32\\.png|icon-48x48\\.png|icon-32x32\\.png|apple-touch-icon\\.png|og-image\\.png|logo\\.png|LogoIcon\\.svg|emp/|raiseright/|assets/|_astro/|yandex_[0-9a-f]+\\.html|[a-f0-9]{32}\\.txt).*)",
   ],
 }

@@ -6,23 +6,27 @@ import {
   ogImageAbsoluteUrl,
 } from "@/lib/site-url"
 
+/**
+ * Clean brand phrases and acronyms only — generic category phrases and
+ * query-shaped strings are rejected by Google's site-name algorithm and push
+ * the SERP header back to a raw domain display. No Wikipedia/Wikidata entity
+ * exists for this brand (verified absent), so no encyclopedia sameAs is emitted.
+ */
 const SCHEMA_ALTERNATE_NAMES = [
-  "RaiseRight Benefits",
-  "RaiseRight Login",
-  "RaiseRight Portal",
-  "RaiseRight scrip",
   "ShopWithScrip",
-  "gift card fundraising",
-  "Everyday Earnings Engine",
   "Great Lakes Scrip Center",
+  "GLSC",
 ] as const
 
+/**
+ * External profiles verified live HTTP 200 on 2026-11-02. Profiles that answer
+ * non-200 to automated checks (Facebook 400, BBB 403, Crunchbase 403) are
+ * excluded — sameAs carries only verified real profiles.
+ */
 const ORGANIZATION_SAME_AS = [
   "https://www.raiseright.com/about-us/",
   "https://www.linkedin.com/company/raiseright/",
-  "https://www.facebook.com/RaiseRightFundraising",
   "https://www.instagram.com/raiserightfundraising/",
-  "https://www.bbb.org/us/mi/grand-rapids/profile/fundraising-counselors-and-organizations/raiseright-llc-0372-13002078/",
   "https://apps.apple.com/us/app/raiseright-fundraising/id1498234012",
 ] as const
 
@@ -57,21 +61,50 @@ export function SeoJsonLd() {
     "@context": "https://schema.org",
     "@type": "Organization",
     name: SITE_DISPLAY_NAME,
-    alternateName: [
-      "ShopWithScrip",
-      "Great Lakes Scrip Center",
-      "RaiseRight LLC",
-      "Great Lakes Scrip Center Inc",
-    ],
+    alternateName: ["ShopWithScrip", "Great Lakes Scrip Center"],
+    legalName: "RaiseRight, LLC",
     url: SITE_ORIGIN,
     logo: logoUrl,
     description: LAYOUT_DESCRIPTION,
     foundingDate: "1994",
-    address: {
-      "@type": "PostalAddress",
-      addressLocality: "Grand Rapids",
-      addressRegion: "MI",
-      addressCountry: "US",
+    address: [
+      {
+        "@type": "PostalAddress",
+        streetAddress: "PO Box 8158",
+        addressLocality: "Kentwood",
+        addressRegion: "MI",
+        postalCode: "49518-8158",
+        addressCountry: "US",
+      },
+      {
+        "@type": "PostalAddress",
+        addressLocality: "Grand Rapids",
+        addressRegion: "MI",
+        addressCountry: "US",
+      },
+    ],
+    contactPoint: {
+      "@type": "ContactPoint",
+      telephone: "+1-800-727-4715",
+      contactType: "customer support",
+      areaServed: "US",
+      availableLanguage: "en",
+      hoursAvailable: [
+        {
+          "@type": "OpeningHoursSpecification",
+          dayOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday"],
+          opens: "08:00",
+          closes: "16:30",
+          timeZone: "America/New_York",
+        },
+        {
+          "@type": "OpeningHoursSpecification",
+          dayOfWeek: ["Friday"],
+          opens: "08:00",
+          closes: "16:00",
+          timeZone: "America/New_York",
+        },
+      ],
     },
     sameAs: [...ORGANIZATION_SAME_AS],
   }

@@ -19,6 +19,8 @@ export type CrawlerVendor =
   | "yandex"
   | "telegram"
   | "cloudflare"
+  | "openai"
+  | "perplexity"
 
 export type BotRegistryEntry = {
   id: string
@@ -65,14 +67,6 @@ export const BOT_REGISTRY: readonly BotRegistryEntry[] = [
     cidrVendor: "semrush",
   },
   {
-    id: "majestic",
-    label: "Majestic",
-    tier: "search_crawler",
-    category: "search_engine",
-    substrings: ["mj12bot"],
-    verification: "none",
-  },
-  {
     id: "moz",
     label: "Moz",
     tier: "seo_tool",
@@ -111,23 +105,6 @@ export const BOT_REGISTRY: readonly BotRegistryEntry[] = [
     category: "seo_tool",
     substrings: ["serpstatbot"],
     verification: "none",
-  },
-  {
-    id: "petalbot",
-    label: "Petalbot",
-    tier: "search_crawler",
-    category: "search_engine",
-    substrings: ["petalbot"],
-    verification: "none",
-  },
-  {
-    id: "seznambot",
-    label: "SeznamBot",
-    tier: "search_crawler",
-    category: "search_engine",
-    substrings: ["seznambot"],
-    verification: "dns",
-    dnsSuffixes: [".seznam.cz"],
   },
   {
     id: "screaming_frog",
@@ -198,7 +175,7 @@ export const BOT_REGISTRY: readonly BotRegistryEntry[] = [
       "google-inspectiontool",
       "storebot-google",
     ],
-    verification: "dns",
+    verification: "cidr+dns",
     cidrVendor: "google",
     dnsSuffixes: [".googlebot.com", ".google.com", ".googleusercontent.com"],
   },
@@ -208,9 +185,9 @@ export const BOT_REGISTRY: readonly BotRegistryEntry[] = [
     tier: "search_crawler",
     category: "search_engine",
     substrings: ["bingbot", "msnbot", "bingpreview", "microsoftpreview", "bingvideopreview", "adidxbot"],
-    verification: "dns",
+    verification: "cidr+dns",
     cidrVendor: "bing",
-    dnsSuffixes: [".search.msn.com"],
+    dnsSuffixes: [".search.msn.com", ".bing.com", ".bingbot.com"],
   },
   {
     id: "duckduckbot",
@@ -218,8 +195,9 @@ export const BOT_REGISTRY: readonly BotRegistryEntry[] = [
     tier: "search_crawler",
     category: "search_engine",
     substrings: ["duckduckbot", "duckduckgo-favicons-bot"],
-    verification: "cidr",
+    verification: "cidr+dns",
     cidrVendor: "duckduck",
+    dnsSuffixes: [".duckduckgo.com"],
   },
   {
     id: "yahoo_slurp",
@@ -235,6 +213,33 @@ export const BOT_REGISTRY: readonly BotRegistryEntry[] = [
     tier: "search_crawler",
     category: "search_engine",
     substrings: ["baiduspider"],
+    verification: "dns",
+    dnsSuffixes: [".baidu.com", ".baidu.jp"],
+  },
+  {
+    id: "petalbot",
+    label: "Petalbot",
+    tier: "search_crawler",
+    category: "search_engine",
+    substrings: ["petalbot"],
+    verification: "dns",
+    dnsSuffixes: [".aspiegel.com", ".petalsearch.com", ".petalbot.com"],
+  },
+  {
+    id: "seznambot",
+    label: "SeznamBot",
+    tier: "search_crawler",
+    category: "search_engine",
+    substrings: ["seznambot"],
+    verification: "dns",
+    dnsSuffixes: [".seznam.cz"],
+  },
+  {
+    id: "majestic",
+    label: "Majestic",
+    tier: "search_crawler",
+    category: "search_engine",
+    substrings: ["mj12bot"],
     verification: "none",
   },
   {
@@ -243,11 +248,14 @@ export const BOT_REGISTRY: readonly BotRegistryEntry[] = [
     tier: "search_crawler",
     category: "search_engine",
     substrings: ["applebot"],
-    verification: "dns",
+    verification: "cidr+dns",
     cidrVendor: "apple",
     dnsSuffixes: [".applebot.apple.com"],
   },
   {
+    // Common Crawl = AI training corpus. Blocked in robots.txt (Disallow: /)
+    // and never on the CrawlerSeoPage allowlist — entry kept only so spoofed
+    // `ccbot` UAs still resolve a label during verification/alerting.
     id: "commoncrawl",
     label: "Common Crawl (AI training — blocked)",
     tier: "search_crawler",
@@ -261,7 +269,7 @@ export const BOT_REGISTRY: readonly BotRegistryEntry[] = [
     label: "Facebook Bot",
     tier: "search_crawler",
     category: "social_preview",
-    substrings: ["facebookexternalhit", "facebot", "facebookbot"],
+    substrings: ["facebookexternalhit", "facebot", "facebookbot", "meta-externalfetcher"],
     verification: "cidr",
     cidrVendor: "facebook",
   },
@@ -289,8 +297,9 @@ export const BOT_REGISTRY: readonly BotRegistryEntry[] = [
     tier: "search_crawler",
     category: "search_engine",
     substrings: ["yandexbot", "yandex"],
-    verification: "cidr",
+    verification: "cidr+dns",
     cidrVendor: "yandex",
+    dnsSuffixes: [".yandex.ru", ".yandex.net", ".yandex.com"],
   },
   {
     id: "telegram",
@@ -300,6 +309,24 @@ export const BOT_REGISTRY: readonly BotRegistryEntry[] = [
     substrings: ["telegrambot"],
     verification: "cidr",
     cidrVendor: "telegram",
+  },
+  {
+    id: "openai",
+    label: "OpenAI / SearchBot",
+    tier: "search_crawler",
+    category: "search_engine",
+    substrings: ["oai-searchbot", "chatgpt-user", "gptbot"],
+    verification: "cidr",
+    cidrVendor: "openai",
+  },
+  {
+    id: "perplexity",
+    label: "PerplexityBot",
+    tier: "search_crawler",
+    category: "search_engine",
+    substrings: ["perplexitybot", "perplexity-user"],
+    verification: "cidr",
+    cidrVendor: "perplexity",
   },
 ] as const
 

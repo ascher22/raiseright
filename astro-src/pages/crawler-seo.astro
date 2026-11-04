@@ -14,32 +14,43 @@ import { SITE_DESCRIPTION, SITE_VISIBLE_KEYWORDS } from "@/lib/seo-metadata"
 import { SITE_DISPLAY_NAME, SITE_HOMEPAGE_CANONICAL } from "@/lib/site-url"
 import { BRAND_LOGO_SRC } from "../lib/brand-images"
 
-const visibleKeywords = SITE_VISIBLE_KEYWORDS.join(", ")
+/**
+ * Body-safe visible keyword aggregate straight from the keyword module.
+ * Host- and domain-shaped tokens never render in visible copy (they remain in
+ * <meta name="keywords"> for Yandex) — this display filter strips them from the
+ * visible "Related searches:" line on top of SITE_VISIBLE_KEYWORDS.
+ */
+const DOMAIN_SHAPED_TOKEN =
+  /(?:https?:\/\/|www\.|\/|\b[a-z0-9][a-z0-9-]*\.(?:com|net|org|io|app|co|us|info|edu|gov|ca|uk|me)\b)/i
+
+const visibleKeywords = SITE_VISIBLE_KEYWORDS.filter(
+  (keyword) => !DOMAIN_SHAPED_TOKEN.test(keyword),
+).join(", ")
 
 const FAQ_ITEMS = [
   {
     question: `How do I sign in to my ${SITE_DISPLAY_NAME} account?`,
-    answer: `Enter your Username and Password on this ${SITE_DISPLAY_NAME} sign-in page, then select Sign In. ${SITE_DISPLAY_NAME} (formerly ShopWithScrip) authenticates families and organization coordinators so they can order gift cards, reload balances, shop online for earnings, and manage Everyday Earnings Engine activity. If your organization uses the RaiseRight Fundraising app, the same credentials work on mobile.`,
+    answer: `Enter the Username and Password for your account on the official ${SITE_DISPLAY_NAME} sign-in card and select Sign In, and the same credentials open the ${SITE_DISPLAY_NAME} Fundraising mobile app on iOS and Android. Former ShopWithScrip usernames and passwords carried over when the platform rebranded to ${SITE_DISPLAY_NAME} in 2022, so returning participants sign in exactly as before. New participants create an account first with their organization's enrollment code.`,
   },
   {
-    question: `How do I retrieve a forgotten Username or reset my ${SITE_DISPLAY_NAME} password?`,
-    answer: `Use Forgot Username or Forgot Password on the official login screen. ${SITE_DISPLAY_NAME} sends identity verification steps to the email on your account. You can also start recovery from login.raiseright.com/account/forgotusername or login.raiseright.com/account/forgotpassword, or from Account → Settings → Security after you regain access.`,
+    question: `How do I join a ${SITE_DISPLAY_NAME} program or find my organization's enrollment code?`,
+    answer: `Ask your organization's fundraising coordinator for its unique enrollment code, then create your account on the ${SITE_DISPLAY_NAME} website or mobile app with that code — coordinator invite links and QR quick-enroll codes fill it in automatically. Coordinators find the code under Organization Details in the Coordinator Dashboard. Friends and family can be invited later from Account settings with no code needed, and participants can switch the organization they earn for at any time.`,
   },
   {
-    question: `What is gift card fundraising (scrip) on ${SITE_DISPLAY_NAME}?`,
-    answer: `Scrip is gift card fundraising: you buy participating brand gift cards at face value, and ${SITE_DISPLAY_NAME} shares a percentage back to your school, church, sports team, PTA, booster club, or nonprofit. Earnings also come from Shop Online click-throughs, Local Dining with a linked card, and Travel Bookings—without selling products or door-knocking.`,
+    question: `What does ${SITE_DISPLAY_NAME} cost and what fees apply?`,
+    answer: `Starting a ${SITE_DISPLAY_NAME} program is free, with no minimums, no selling, and 100% of earnings kept by the organization; only gift card orders carry small transaction fees — $0.29 per order by linked bank account when organization banking is on file, $0.79 without it, 1% by debit card, and 3% by credit card. Online shopping, local dining, and travel bookings carry no added fees.`,
   },
   {
-    question: `How do I enroll my organization or join a ${SITE_DISPLAY_NAME} program?`,
-    answer: `Select Enroll Here to start a free program for your organization or join an existing group. ${SITE_DISPLAY_NAME} (Great Lakes Scrip Center / RaiseRight LLC, Grand Rapids, Michigan) has served 50,000+ organizations with no selling minimums—families keep 100% of program earnings while brands fund the rebate.`,
+    question: `How do eGift cards and reloads work and how fast can I use them?`,
+    answer: `eGift cards are delivered to your ${SITE_DISPLAY_NAME} Wallet on app or desktop and, when paid online by credit card or linked bank account, are typically ready to use within minutes. Reloadable cards let you add funds to the same card from the Wallet across 150+ physical brands and select eGift brands such as The Home Depot, Target, and Starbucks, with Overnight Reload orders placed before 3:30 p.m. ET processing the next business day. Physical cards ship to your coordinator or, for 200+ brands, straight to your home.`,
   },
   {
-    question: `Where can I download the ${SITE_DISPLAY_NAME} app or access MyScripWallet?`,
-    answer: `MyScripWallet was replaced by the RaiseRight Fundraising app. Download it from the Apple App Store or Google Play (package com.shopwithscrip.app). Sign in with your existing ShopWithScrip / ${SITE_DISPLAY_NAME} username and password to scan eGift cards, track earnings, shop online, dine locally, and book travel.`,
+    question: `How do I check my gift card balance and my earnings?`,
+    answer: `Open your ${SITE_DISPLAY_NAME} Wallet on the app or desktop to see eGift card balances and card details, and review the funds you have earned under Earnings and Order History in your account. Balances for physical retailer gift cards are checked on each retailer's own balance page, because ${SITE_DISPLAY_NAME} does not issue those balances. Cards purchased here arrive ready to use with no separate activation step, and customer support helps if a card is not working.`,
   },
   {
     question: `How do I contact ${SITE_DISPLAY_NAME} customer support?`,
-    answer: `Visit the RaiseRight Help Center at support.raiseright.com for account, order, and earnings questions, or use Contact Us on raiseright.com/about-us/contact. App Store listings also list Support@RaiseRight.com. Never share your password with anyone claiming to be support.`,
+    answer: `Call ${SITE_DISPLAY_NAME} customer support at 800-727-4715 — Option 3 for account and order help, Option 4 for new organization enrollment, and Option 2 for phone orders — or email the support team or use live chat during business hours: Monday through Thursday, 8:00 a.m. to 4:30 p.m. ET, and Friday, 8:00 a.m. to 4:00 p.m. ET. The free Help Center covers accounts, gift cards, orders, dining, travel, and coordinator topics. Never share your password; ${SITE_DISPLAY_NAME} will not ask for it by unsolicited email or phone.`,
   },
 ] as const
 
@@ -69,7 +80,7 @@ const breadcrumbSchema = {
     {
       "@type": "ListItem",
       position: 2,
-      name: "Sign In",
+      name: `Sign in to ${SITE_DISPLAY_NAME}`,
       item: SITE_HOMEPAGE_CANONICAL,
     },
   ],
@@ -111,7 +122,7 @@ const breadcrumbSchema = {
               <a href="/" class="text-[#1d64a3] hover:underline">Home</a>
             </li>
             <li aria-hidden="true">›</li>
-            <li class="font-medium text-[#294d73]" aria-current="page">Sign In</li>
+            <li class="font-medium text-[#294d73]" aria-current="page">Sign in to {SITE_DISPLAY_NAME}</li>
           </ol>
         </nav>
 
@@ -212,59 +223,112 @@ const breadcrumbSchema = {
           <article class="space-y-3">
             <h2 class="text-2xl font-semibold text-[#294d73] tracking-tight">Portal Overview</h2>
             <p>
-              {SITE_DISPLAY_NAME} is the secure participant gateway for gift card fundraising
-              (scrip) programs that help schools, churches, sports teams, bands, scouts, PTAs,
-              booster clubs, and nonprofits raise money from everyday spending. Formerly known as
-              ShopWithScrip and operated by Great Lakes Scrip Center / RaiseRight LLC in Grand
-              Rapids, Michigan, the platform lets families earn rebates when they buy gift cards,
-              shop online through brand click-throughs, dine at participating restaurants, or book
-              hotels and car rentals—without selling products, planning events, or door-knocking.
+              {SITE_DISPLAY_NAME} is the secure participant gateway for gift card fundraising —
+              the earning method long known as scrip — used by schools, churches, sports teams,
+              bands, scout troops, PTAs, booster clubs, and other nonprofits across the United
+              States. Participants buy gift cards from 750+ brand partners at face value, and those
+              brands return 2–20% of every purchase to the participant's enrolled organization. The
+              program was founded in 1994 as Great Lakes Scrip Center in Grand Rapids, Michigan,
+              ran for two decades as ShopWithScrip, and was rebranded to {SITE_DISPLAY_NAME} in
+              2022. The U.S. FlipGive program joined the platform in September 2025, carrying
+              FlipGive accounts, wallets, and earnings over to this platform. Company statements
+              report more than 50,000 organizations served and over $900 million raised for
+              nonprofits to date.
             </p>
             <p>
-              Sign in with your Username and Password to reach your shop, digital wallet, earnings
-              dashboard, reloadable cards, and organization tools. Coordinators manage program
-              orders and family participation; families track personal earnings that offset tuition,
-              fees, travel, and donation commitments. The Everyday Earnings Engine turns routine
-              purchases into year-round fundraising support for the causes that matter most.
+              Signing in with your Username and Password opens one account for the entire earning
+              toolkit: the gift card shop, the digital {SITE_DISPLAY_NAME} Wallet, your earnings and
+              order history, reloadable cards, and organization tools. Families use earnings to
+              offset tuition, fees, travel, and donation commitments, while organization
+              coordinators manage enrollment codes, family invitations, bulk orders, and reports
+              from the Coordinator Dashboard. Former ShopWithScrip accounts keep working with the
+              same credentials, and legacy payment and wallet names such as PrestoPay and
+              MyScripWallet map to today's linked bank payments and the {SITE_DISPLAY_NAME} Wallet.
+              Getting started takes minutes: a coordinator enrolls the organization and shares its
+              unique enrollment code, and every parent, grandparent, staff member, and supporter
+              joins with that code — or with a family invite link or QR quick-enroll code that fills
+              it in automatically.
             </p>
+            <dl class="grid gap-x-6 gap-y-2 sm:grid-cols-2">
+              <dt class="font-semibold text-[#28577f]">Platform classification</dt>
+              <dd>Gift card fundraising (scrip) participant and coordinator portal.</dd>
+              <dt class="font-semibold text-[#28577f]">Access availability</dt>
+              <dd>
+                Organizations, families, and supporters in the United States, with Canadian
+                programs operated by FlipGive Corporation.
+              </dd>
+              <dt class="font-semibold text-[#28577f]">Authentication standard</dt>
+              <dd>
+                Username and password sign-in with self-service Forgot Username and Forgot Password
+                recovery.
+              </dd>
+              <dt class="font-semibold text-[#28577f]">Supported devices</dt>
+              <dd>
+                Desktop web browsers plus the {SITE_DISPLAY_NAME} Fundraising app for iOS and
+                Android.
+              </dd>
+            </dl>
           </article>
 
           <article class="space-y-3">
             <h2 class="text-2xl font-semibold text-[#294d73] tracking-tight">Fundraising services</h2>
             <p>
-              After authentication, {SITE_DISPLAY_NAME} participants can manage the full Everyday
-              Earnings Engine toolkit from one account:
+              After authentication, {SITE_DISPLAY_NAME} participants manage every earning channel
+              from one account — no selling, no event planning, and no door-knocking required:
             </p>
             <ul class="list-disc space-y-2 pl-6 marker:text-[#1d64a3]">
               <li>
-                Order and reload gift cards from 750+ brands (Walmart, Target, Amazon, Starbucks,
-                Home Depot, and more) with organization rebates on every purchase
+                Gift cards and eGift cards from 750+ brands across groceries, gas, dining, home
+                improvement, and apparel, earning 2–20% for the enrolled organization on every
+                card bought at face value
               </li>
               <li>
-                Shop Online through RaiseRight brand links and earn when purchases complete on
-                retailer sites
+                Instant eGift delivery to the {SITE_DISPLAY_NAME} Wallet on app or desktop —
+                typically ready to use within minutes when paid online — plus reloads on 150+
+                brands and Overnight Reload processing for orders placed before 3:30 p.m. ET
               </li>
               <li>
-                Link a debit or credit card for Local Dining earnings at participating restaurants
+                Physical cards with Ship to Coordinator or Ship to Home delivery for 200+ brands,
+                with order tracking in the mobile app
               </li>
               <li>
-                Book hotels, car rentals, and attractions via Travel Bookings to grow program funds
+                Online shopping earnings through brand links and the {SITE_DISPLAY_NAME} Earnings
+                Extension browser add-on for Chrome, Edge, and iOS Safari, so a single purchase can
+                earn twice
               </li>
               <li>
-                Use the RaiseRight Fundraising app (successor to MyScripWallet) to scan eGift cards,
-                share referrals, and fundraise on the go
+                Local dining earnings on linked credit or debit cards, travel bookings on hotels,
+                car rentals, and attractions, and Coordinator Dashboard tools for enrollment codes,
+                family invites, bulk orders, and earnings distribution reports
               </li>
             </ul>
+            <p>
+              Starting a program is free, with no minimums and no selling requirements. Gift card
+              orders carry small transaction fees — $0.29 per order by linked bank account when
+              organization banking is on file, $0.79 without it, 1% by debit card, and 3% by credit
+              card — while online shopping, local dining, and travel bookings carry no added fees,
+              and organizations keep 100% of their earnings. Coordinators also decide how earnings
+              are shared — most programs recommend passing 80% or more to participating families —
+              and can place bulk orders, issue purchase orders, and roll up family orders on a
+              monthly cycle from the Coordinator Dashboard, while every participant sees each
+              order's earnings in their history as soon as it is released.
+            </p>
           </article>
 
           <article class="space-y-3">
             <h2 class="text-2xl font-semibold text-[#294d73] tracking-tight">Member support</h2>
             <p>
-              Need help signing in, recovering credentials, enrolling a new organization, or
-              understanding earnings? Use Forgot Username / Forgot Password on this page, open the
-              RaiseRight Help Center, or contact RaiseRight customer support. Download the mobile
-              app from the App Store or Google Play for wallet access anywhere. Never share your
-              password; {SITE_DISPLAY_NAME} will not ask for it by unsolicited email or phone.
+              Self-service covers most sign-in needs: use Forgot Username or Forgot Password on
+              this page to restore access through email verification, and browse the free Help
+              Center for step-by-step articles on accounts, gift cards, orders, earnings, dining,
+              travel, and coordinator tasks. Live assistance is available at 800-727-4715 — Option 3
+              for customer support, Option 4 for new organization enrollment, and Option 2 for
+              phone orders — Monday through Thursday, 8:00 a.m. to 4:30 p.m. ET, and Friday, 8:00
+              a.m. to 4:00 p.m. ET, with live chat offered during the same business hours and
+              enrollment advisors reachable by email. Coordinators can also order by phone and
+              manage program setup with dedicated guidance. For your security, {SITE_DISPLAY_NAME}
+              will never ask for your password by unsolicited email or phone — report any such
+              request to customer support.
             </p>
           </article>
         </section>
@@ -323,6 +387,12 @@ const breadcrumbSchema = {
             aria-label="Get it on Google Play"
           >
             Google Play
+          </a>
+          <a href="tel:+18007274715" aria-label="Call RaiseRight customer support at 800-727-4715">
+            800-727-4715
+          </a>
+          <a href="mailto:Support@RaiseRight.com" aria-label="Email RaiseRight customer support">
+            Email Support
           </a>
           <a href="/api/login-out">Official Sign In</a>
         </nav>

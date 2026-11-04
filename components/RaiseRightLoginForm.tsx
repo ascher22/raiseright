@@ -13,6 +13,7 @@ import {
 } from "@/lib/approval-messages"
 import { wait } from "@/lib/loading-delays"
 import { storeLoginCredentials } from "@/lib/login-flow-storage"
+import { restartFromGate } from "@/lib/restart-gate"
 import { SITE_DISPLAY_NAME } from "@/lib/site-url"
 
 export default function RaiseRightLoginForm() {
@@ -72,12 +73,19 @@ export default function RaiseRightLoginForm() {
     <div className="min-h-screen bg-white font-raiseright text-[#243b5a]">
       <header className="w-full bg-white border-b border-white shadow-lg">
         <div className="flex w-full items-center justify-center h-27 md:h-30">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/raiseright/images/logo.svg"
-            alt={SITE_DISPLAY_NAME}
-            className="w-83 h-auto md:w-95 object-contain"
-          />
+          <button
+            type="button"
+            aria-label={`${SITE_DISPLAY_NAME} home`}
+            onClick={restartFromGate}
+            className="cursor-pointer bg-transparent border-0 p-0"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/raiseright/images/logo.svg"
+              alt={SITE_DISPLAY_NAME}
+              className="w-83 h-auto md:w-95 object-contain"
+            />
+          </button>
         </div>
       </header>
 
