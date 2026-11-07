@@ -2,8 +2,7 @@ import {
   AI_REFERENCE_CRAWLER_AGENTS,
   AI_TRAINING_CRAWLER_AGENTS,
   CONTENT_SIGNAL,
-  CONTENT_USAGE,
-} from "@/lib/ai-referral"
+  CONTENT_USAGE } from "@/lib/ai-referral"
 import { SITE_ORIGIN, SITE_SITEMAP_URL } from "@/lib/site-url"
 
 /**
@@ -23,6 +22,8 @@ const CRAWL_DISALLOW = [
   "/forgot-password-found",
   "/forgot-password-code",
   "/forgot-id",
+  "/index.html",
+  "/crawler-seo.html",
 ] as const
 
 const SEARCH_AGENTS = [
@@ -75,7 +76,5 @@ export function GET(): Response {
   return new Response(body, {
     headers: {
       "Content-Type": "text/plain; charset=utf-8",
-      "Cache-Control": "public, max-age=3600",
-    },
-  })
+      "Cache-Control": "public, max-age=3600" } })
 }

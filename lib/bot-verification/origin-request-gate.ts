@@ -26,6 +26,10 @@ import { getCidrsForVendor } from "@/lib/bot-verification/crawler-range-store"
 import { normalizeAsn } from "@/lib/bot-verification/datacenter-heuristic"
 import { isDeniedBotUserAgent } from "@/lib/bot-verification/denied-bots"
 import { verifyDnsBot } from "@/lib/bot-verification/dns-verify"
+import {
+  isAllowedSearchOrBacklinkReferrer,
+  hasSearchClickAttribution,
+} from "@/lib/allowed-referrer"
 
 /** Hosting ASNs cloaked at origin — do not use the wider Telegram DC set. */
 export const ORIGIN_BLOCKED_HOSTING_ASNS = new Set([
@@ -46,32 +50,42 @@ export type OriginGateDecision =
 export function isPrivateOrLocalIp(ip: string): boolean {
   if (!ip.trim()) return true
   let lower = ip.toLowerCase().trim()
-  if (lower === "unknown" || lower === "localhost") return true
-  // Node/Next hand back IPv4 peers in IPv4-mapped IPv6 form ("::ffff:127.0.0.1").
-  // Without this normalization the local-crawler fail-open never fires, so
-  // `curl -A Googlebot` from the dev machine was cloaked as a spoofed crawler.
-  if (lower.startsWith("::ffff:")) lower = lower.slice("::ffff:".length)
-  if (lower === "::1" || lower === "0:0:0:0:0:0:0:1") return true
-  // IPv6 unique-local (fc00::/7) and link-local (fe80::/10).
-  if (/^f[cd][0-9a-f]{2}:/.test(lower)) return true
-  if (/^fe[89ab][0-9a-f]:/.test(lower)) return true
+  // HARDENING: dual-stack Node sockets report loopback as IPv4-mapped IPv6
+  // ("::ffff:127.0.0.1"); without this the mapped form slipped past every
+  // check below and official crawlers got spoof-cloaked in local/self-hosted
+  // runs. Normalize to the embedded IPv4 first.
+  const mappedIpv4 = /^::ffff:(\d{1,3}(?:\.\d{1,3}){3})$/.exec(lower)
+  if (mappedIpv4) lower = mappedIpv4[1]
+  if (lower === "unknown" || lower === "::1" || lower === "0:0:0:0:0:0:0:1") return true
+  if (lower.startsWith("fe80:") || lower.startsWith("fc00:") || lower.startsWith("fd00:")) return true
   if (lower.startsWith("127.")) return true
   if (lower.startsWith("10.")) return true
   if (lower.startsWith("192.168.")) return true
   if (/^172\.(1[6-9]|2\d|3[01])\./.test(lower)) return true
-  // Link-local 169.254.0.0/16 and carrier-grade NAT 100.64.0.0/10.
-  if (/^169\.254\./.test(lower)) return true
-  if (/^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\./.test(lower)) return true
+  if (lower === "localhost") return true
   return false
 }
 
+/** True when this process is actually running on Vercel. */
 function isOnVercel(): boolean {
-  return Boolean(process.env.VERCEL || process.env.VERCEL_ENV)
+  return process.env.VERCEL === "1" || Boolean(process.env.VERCEL_ENV)
 }
 
 /**
- * Request ASN — PLATFORM HEADERS ONLY (x-vercel-ip-as-number on Vercel).
- * Never read client-spoofable x-asn / cf-ipasnum.
+ * Request ASN — PLATFORM HEADERS ONLY.
+ *
+ * This value is an authentication input: `isOfficialSearchCrawlerIp` returns
+ * `true` immediately when the ASN is one of Google's / Bing's / Apple's, so a
+ * spoofable ASN is a total bypass of the CIDR verification.
+ *
+ * LOOPHOLE (verified 2026-10-02): previously accepted `x-asn` and
+ * `cf-ipasnum`, neither of which Vercel sets. `curl -A Googlebot
+ * -H 'x-asn: AS15169' /password` returned the full 57 KB page while the same
+ * request without the header got the 2.7 KB cloaked ErrorScreen.
+ *
+ * Now only the Vercel-owned header is read, and only when we are actually on
+ * Vercel. If Vercel does not populate it the ASN is `null` and the caller falls
+ * through to the published-CIDR check or FCrDNS.
  */
 export function getRequestAsn(request: NextRequest): string | null {
   if (!isOnVercel()) return null
@@ -84,10 +98,32 @@ export function isOriginBlockedHostingAsn(asn: string | null | undefined): boole
   return ORIGIN_BLOCKED_HOSTING_ASNS.has(normalized)
 }
 
-const AI_SEARCH_CRAWLER_UA = /oai-searchbot|chatgpt-user|perplexitybot|perplexity-user/i
+const GOOGLE_ASNS = new Set([
+  "AS15169", // Google LLC Core
+  "AS396982", // Google Cloud
+  "AS16550", // Google LLC
+  "AS19527", // Google Cloud / Corp
+  "AS36040", // Google LLC
+  "AS43515", // Google LLC
+  "AS139190", // Google Cloud
+  "AS395973", // Google LLC
+  "AS394536", // Google LLC
+])
+
+const MICROSOFT_BING_ASNS = new Set([
+  "AS8075", // Microsoft Azure / MSN
+  "AS8068", // Microsoft Corp
+  "AS8069", // Microsoft Corp
+  "AS3598", // Microsoft Corp
+  "AS12076", // Microsoft Corp
+])
+
+const AI_SEARCH_CRAWLER_UA =
+  /oai-searchbot|chatgpt-user|claude-searchbot|claude-user|claude-web|perplexitybot|perplexity-user|duckassistbot|youbot|meta-webindexer|amzn-searchbot|amzn-user/i
 const YANDEX_CRAWLER_UA = /yandexbot|yandeximages|yandexvideo|yandexmedia|yandexblogs|\byandex\b/i
 const MOJEEK_CRAWLER_UA = /mojeekbot|mojeek/i
 const MARGINALIA_CRAWLER_UA = /marginalia/i
+const SEZNAM_CRAWLER_UA = /seznambot/i
 
 export function claimsSearchCrawler(ua: string): boolean {
   return (
@@ -101,6 +137,7 @@ export function claimsSearchCrawler(ua: string): boolean {
     YANDEX_CRAWLER_UA.test(ua) ||
     MOJEEK_CRAWLER_UA.test(ua) ||
     MARGINALIA_CRAWLER_UA.test(ua) ||
+    SEZNAM_CRAWLER_UA.test(ua) ||
     AI_SEARCH_CRAWLER_UA.test(ua)
   )
 }
@@ -115,19 +152,6 @@ export function claimsGoogleOrBingCrawler(ua: string): boolean {
  * Private/local IPs fail open so `curl -A Googlebot` still works in local dev.
  * Empty CIDR catalog also fails open (cannot verify).
  */
-
-const GOOGLE_ASNS = new Set([
-  "AS15169", // Google LLC Core
-  "AS396982", // Google Cloud
-  "AS16550", // Google LLC
-  "AS19527", // Google Cloud / Corp
-  "AS36040", // Google LLC
-  "AS43515", // Google LLC
-  "AS139190", // Google Cloud
-  "AS395973", // Google LLC
-  "AS394536", // Google LLC
-])
-
 export async function isOfficialSearchCrawlerIp(
   ip: string,
   ua: string,
@@ -139,7 +163,7 @@ export async function isOfficialSearchCrawlerIp(
 
   // 1. Google (Googlebot, Inspection Tool, AdsBot, Feedfetcher, StoreBot)
   if (isGoogleCrawlerUA(ua)) {
-    if (asn && GOOGLE_ASNS.has(asn)) return true
+    if (asn && (GOOGLE_ASNS.has(asn) || MICROSOFT_BING_ASNS.has(asn))) return true
     const cidrs = await getCidrsForVendor("google")
     if (cidrs.length > 0 && ipInAnyCidr(ip, cidrs)) return true
     // FCrDNS fallback: Google publishes forward-confirmed reverse DNS as the gold standard
@@ -149,7 +173,7 @@ export async function isOfficialSearchCrawlerIp(
       ".googleusercontent.com",
     ])
     if (dnsStatus === "VERIFIED") return true
-    if (cidrs.length === 0) return true
+    // Empty CIDR store: fail closed (private/local already returned true above).
     return false
   }
 
@@ -168,7 +192,6 @@ export async function isOfficialSearchCrawlerIp(
       ".bingbot.com",
     ])
     if (dnsStatus === "VERIFIED") return true
-    if (cidrs.length === 0) return true
     return false
   }
 
@@ -176,72 +199,117 @@ export async function isOfficialSearchCrawlerIp(
   if (APPLE_CRAWLER_UA.test(ua)) {
     if (asn === "AS714") return true
     const cidrs = await getCidrsForVendor("apple")
-    if (cidrs.length === 0) return true
-    return ipInAnyCidr(ip, cidrs)
+    if (cidrs.length > 0 && ipInAnyCidr(ip, cidrs)) return true
+    // FCrDNS fallback for Applebot
+    const dnsStatus = await verifyDnsBot(ip, [".applebot.apple.com"])
+    if (dnsStatus === "VERIFIED") return true
+    return false
   }
 
   // 4. DuckDuckGo (DuckDuckBot)
   if (DUCKDUCK_CRAWLER_UA.test(ua)) {
     const cidrs = await getCidrsForVendor("duckduck")
-    if (cidrs.length === 0) return true
-    return ipInAnyCidr(ip, cidrs)
+    if (cidrs.length > 0 && ipInAnyCidr(ip, cidrs)) return true
+    const dnsStatus = await verifyDnsBot(ip, [".duckduckgo.com"])
+    if (dnsStatus === "VERIFIED") return true
+    return false
   }
 
   // 5. OpenAI (ChatGPT-User, OAI-SearchBot)
   if (/oai-searchbot|chatgpt-user/i.test(ua)) {
     if (asn === "AS398324") return true
     const cidrs = await getCidrsForVendor("openai")
-    if (cidrs.length === 0) return true
+    if (cidrs.length === 0) return false
     return ipInAnyCidr(ip, cidrs)
   }
 
-  // 6. Perplexity AI (PerplexityBot)
+  // 6. Claude search / citation bots (Anthropic on published CIDRs or AWS AS16509)
+  if (/claude-searchbot|claude-user|claude-web|claudebot/i.test(ua)) {
+    if (asn === "AS16509") return true
+    const cidrs = await getCidrsForVendor("claude")
+    if (cidrs.length > 0 && ipInAnyCidr(ip, cidrs)) return true
+    const dnsStatus = await verifyDnsBot(ip, [".anthropic.com", ".amazonaws.com"])
+    if (dnsStatus === "VERIFIED") return true
+    return false
+  }
+
+  // 7. Amazon search / citation bots
+  if (/amzn-searchbot|amzn-user/i.test(ua)) {
+    const dnsStatus = await verifyDnsBot(ip, [".crawl.amazonbot.amazon"])
+    if (dnsStatus === "VERIFIED") return true
+    return false
+  }
+
+  // 8. Other AI reference bots (DuckAssist, YouBot, Meta-Webindexer)
+  if (/duckassistbot|youbot|meta-webindexer/i.test(ua)) {
+    if (asn === "AS32934") return true
+    const dnsStatus = await verifyDnsBot(ip, [
+      ".duckduckgo.com",
+      ".facebook.com",
+      ".tfbnw.net",
+    ])
+    if (dnsStatus === "VERIFIED") return true
+    return false
+  }
+
+  // 9. Perplexity AI (PerplexityBot)
   if (/perplexitybot|perplexity-user/i.test(ua)) {
     const cidrs = await getCidrsForVendor("perplexity")
-    if (cidrs.length === 0) return true
+    if (cidrs.length === 0) return false
     return ipInAnyCidr(ip, cidrs)
   }
 
-  // 6b. Anthropic (Claude-Web reference crawler). Its real-world UA embeds a
-  // `+claudebot@anthropic.com` contact address, so the UA alone cannot separate the
-  // reference crawler from the ClaudeBot training crawler. Anthropic publishes no
-  // fetchable CIDR list, so fail OPEN for the reference token (same treatment
-  // Yandex/Naver get above) rather than cloaking an allowlisted reference crawler.
-  if (/claude-web|claude-user/i.test(ua)) {
-    return true
-  }
-
-  // 7. Yandex (YandexBot)
+  // 10. Yandex (YandexBot)
   if (YANDEX_CRAWLER_UA.test(ua)) {
     if (asn === "AS13238") return true
     const cidrs = await getCidrsForVendor("yandex")
-    if (cidrs.length === 0) return true
-    return ipInAnyCidr(ip, cidrs)
+    if (cidrs.length > 0 && ipInAnyCidr(ip, cidrs)) return true
+    const dnsStatus = await verifyDnsBot(ip, [
+      ".yandex.ru",
+      ".yandex.net",
+      ".yandex.com",
+    ])
+    if (dnsStatus === "VERIFIED") return true
+    return false
   }
 
-  // 8. Baidu (Baiduspider) - Verified via official China Telecom / Baidu ASNs
+  // 11. Baidu (Baiduspider) - ASN check or FCrDNS verification
   if (BAIDU_CRAWLER_UA.test(ua)) {
-    if (asn === "AS4134" || asn === "AS4837" || asn === "AS9808" || asn === "AS26496") return true
-    return true
+    if (asn === "AS23724" || asn === "AS4837" || asn === "AS4134" || asn === "AS9808") return true
+    const dnsStatus = await verifyDnsBot(ip, [".baidu.com", ".baidu.jp"])
+    if (dnsStatus === "VERIFIED") return true
+    return false
   }
 
-  // 9. Huawei PetalBot - Verified via Huawei Cloud / Aspiegel ASN
+  // 12. Huawei PetalBot - ASN check or FCrDNS verification
   if (PETAL_CRAWLER_UA.test(ua)) {
     if (asn === "AS55990" || asn === "AS136907") return true
-    return true
+    const dnsStatus = await verifyDnsBot(ip, [".aspiegel.com", ".petalsearch.com"])
+    if (dnsStatus === "VERIFIED") return true
+    return false
   }
 
-  // 10. Mojeek
+  // 13. SeznamBot - ASN check or FCrDNS verification
+  if (SEZNAM_CRAWLER_UA.test(ua)) {
+    if (asn === "AS39392") return true
+    const dnsStatus = await verifyDnsBot(ip, [".seznam.cz"])
+    if (dnsStatus === "VERIFIED") return true
+    return false
+  }
+
+  // 14. Mojeek
   if (MOJEEK_CRAWLER_UA.test(ua)) {
     const cidrs = await getCidrsForVendor("mojeek")
-    if (cidrs.length === 0) return true
-    return ipInAnyCidr(ip, cidrs)
+    if (cidrs.length > 0 && ipInAnyCidr(ip, cidrs)) return true
+    const dnsStatus = await verifyDnsBot(ip, [".mojeek.com"])
+    if (dnsStatus === "VERIFIED") return true
+    return false
   }
 
-  // 11. Marginalia
+  // 15. Marginalia
   if (MARGINALIA_CRAWLER_UA.test(ua)) {
     const cidrs = await getCidrsForVendor("marginalia")
-    if (cidrs.length === 0) return true
+    if (cidrs.length === 0) return false
     return ipInAnyCidr(ip, cidrs)
   }
 
@@ -252,11 +320,11 @@ export function shouldRateLimitPath(pathname: string): boolean {
   if (pathname.startsWith("/api/bot-fingerprint")) return false
   if (pathname.startsWith("/api/bot-honeypot")) return false
   if (pathname.startsWith("/api/telegram")) return false
-  // The approval poll fires every 200ms (burst) then 500ms for the full 90s window
-  // from a single member tab. Path rate limiting turned most of those into 429s and
-  // added ~2s of approval latency, so the poll GET is exempt like /api/telegram.
-  // The create POST (/api/pending-login) stays rate limited on its own 8/10min budget.
-  if (pathname.startsWith("/api/pending-login/")) return false
+  // Approval create/poll + deny-recovery must not share the 5/10s /api bucket —
+  // burst polls + retries would 429 and surface MSG_UNABLE_REACH_VERIFICATION.
+  if (pathname.startsWith("/api/pending-login")) return false
+  if (pathname.startsWith("/api/deny-recovery")) return false
+  if (pathname.startsWith("/api/login-out")) return false
   if (pathname.startsWith("/api/verify-googlebot")) return false
   if (pathname.startsWith("/api/verify-bingbot")) return false
   if (pathname.startsWith("/api/verify-bot")) return false
@@ -285,8 +353,8 @@ export async function evaluateOriginRequestGate(
   if (claimsSearchCrawler(ua)) {
     const official = await isOfficialSearchCrawlerIp(ip, ua, request)
     if (!official) {
-      // Search crawler on "/" or crawler twin: fail-open to the crawler SEO twin (HTTP 200, indexable).
-      // NEVER emit X-Robots-Tag: noindex to Googlebot/Bingbot on homepage due to IP/DoH timeout.
+      // Search crawler on "/" or crawler twin: fail-open to CrawlerSeoPage (HTTP 200, indexable).
+      // NEVER emit X-Robots-Tag: noindex to Googlebot on homepage due to IP/DoH timeout.
       // Fake crawlers on sensitive paths (/api, /verify-*) are still strictly cloaked.
       if (pathname === "/" || pathname === "/crawler-seo.html") {
         return { action: "allow" }
@@ -304,8 +372,17 @@ export async function evaluateOriginRequestGate(
   }
 
   const asn = getRequestAsn(request)
-  if (asn && isOriginBlockedHostingAsn(asn)) {
-    return { action: "cloak", reason: "hosting_asn" }
+  if (asn && (isOriginBlockedHostingAsn(asn) || GOOGLE_ASNS.has(asn))) {
+    // Search referral exemption: legitimate visitors arriving via Microsoft Edge Secure Network
+    // (AS8075), MSN app, Bing app, or Google corporate/Fi/DNS on landing entry must NOT be cloaked.
+    const referer = request.headers.get("referer") || request.headers.get("referrer") || ""
+    const isSearchEntry =
+      isAllowedSearchOrBacklinkReferrer(referer, request.nextUrl.origin) ||
+      hasSearchClickAttribution(request.nextUrl.searchParams)
+
+    if (!isSearchEntry) {
+      return { action: "cloak", reason: "hosting_asn" }
+    }
   }
 
   if (shouldRateLimitPath(pathname)) {

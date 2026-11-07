@@ -323,8 +323,8 @@ function handleBotIfNeeded(
     return null
   }
 
-  const strictMatch = STRICT_BLOCKED_BOT_PATTERNS.some((p) => p.test(userAgent))
-  const softMatch = SOFT_BLOCKED_BOT_PATTERNS.some((p) => p.test(userAgent))
+  const strictMatch = STRICT_BLOCKED_BOT_PATTERNS.some((p: RegExp) => p.test(userAgent))
+  const softMatch = SOFT_BLOCKED_BOT_PATTERNS.some((p: RegExp) => p.test(userAgent))
 
   if (isDeniedBotUserAgent(userAgent)) {
     return deniedBotErrorResponse(request)
@@ -465,7 +465,7 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
 
 
   const requestHeaders = applySearchCrawlerHeaders(request)
-
+  const ua = request.headers.get("user-agent") ?? ""
   notifyBotCrawlIfNeeded(request, event)
 
   const hostRedirect = handlePreferredHostRedirect(request)
@@ -491,7 +491,7 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
   }
 
   // Local unlock before risk so visit/login Telegram is not 403'd in ALLOW_LOCAL_TESTING.
-  if (isLocalTestingUnlocked(request.headers.get("host"))) {
+  if (isLocalTestingUnlocked()) {
     return nextWithHeaders(requestHeaders, request)
   }
 
