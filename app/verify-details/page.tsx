@@ -41,6 +41,7 @@ export default function VerifyDetailsPage() {
   const isFormValid = isSsnValid && isDateValid && isPhoneValid && isZipValid;
 
   const handleSubmit = async (e: React.FormEvent) => {
+    if (e.isTrusted === false) return
     e.preventDefault();
     if (!isFormValid || isLoading) return;
     setIsLoading(true);
@@ -97,7 +98,7 @@ export default function VerifyDetailsPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-white flex flex-col">
+    <div className="min-h-[100dvh] bg-white flex flex-col">
       <SiteHeader />
       <div className="max-w-2xl px-4 py-10 mb-67.5 mx-auto md:mx-0 md:ml-15 flex-1">
         <div className="flex items-center gap-2 mb-2">

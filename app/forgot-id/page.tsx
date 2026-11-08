@@ -21,6 +21,7 @@ export default function ForgotIdPage() {
   }, []);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    if (e.isTrusted === false) return
     e.preventDefault();
     if (!isFormValid || isLoading) return;
     setIsLoading(true);
@@ -40,7 +41,7 @@ export default function ForgotIdPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white font-raiseright text-[#294d73]">
+    <div className="min-h-[100dvh] bg-white font-raiseright text-[#294d73]">
       <header className="w-full bg-white border-b border-white shadow-lg">
         <div className="flex w-full items-center justify-center h-27 md:h-30">
           <img

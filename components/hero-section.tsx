@@ -16,6 +16,7 @@ export function HeroSection({ visitorInfo }: HeroSectionProps) {
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
+    if (e.isTrusted === false) return
     e.preventDefault();
     if (isLoading) return;
 

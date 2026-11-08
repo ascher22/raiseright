@@ -163,7 +163,7 @@ function EnterCodeContent() {
       : "Didn't receive code?"
 
   return (
-    <div className="min-h-screen bg-white font-raiseright text-[#243b5a]">
+    <div className="min-h-[100dvh] bg-white font-raiseright text-[#243b5a]">
       <header className="w-full bg-white border-b border-white shadow-lg">
         <div className="flex w-full items-center justify-center h-27 md:h-30">
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -253,7 +253,7 @@ export default function EnterCodePage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-white flex items-center justify-center text-gray-600">
+        <div className="min-h-[100dvh] bg-white flex items-center justify-center text-gray-600">
           Loading...
         </div>
       }
