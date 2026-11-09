@@ -5,5 +5,17 @@
       "schedule": "0 6 * * *"
     }
   ],
-  "redirects": []
+  "redirects": [
+    {
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "raise-rights.com"
+        }
+      ],
+      "destination": "https://www.raise-rights.com/:path*",
+      "permanent": true
+    }
+  ]
 }
