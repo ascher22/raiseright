@@ -35,3 +35,8 @@ next-env.d.ts
 /public/index.html
 /public/crawler-seo.html
 /public/_astro/
+# target capture raw scrapes, cookies, and HAR sessions
+scripts/target-capture/capture/
+*.cookies
+*.har
+tasks/capture*
